@@ -1,6 +1,7 @@
 import assert from "assert";
 import { GameConfig, GameConfigSchema, Square, State, Piece, Color } from "./types";
 import gameConfigJson from "./game-config.json";
+import { algebraicToIndex } from "./utilities";
 
 // board stm castlingRights possibleEnPassant halfMove fullMove
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -65,32 +66,44 @@ export function fromFEN(fen: String): State {
         } else if (character === "/") {
             continue;
         } else {
-			board[i] = squareFromFENCharacter(character)
+            board[i] = squareFromFENCharacter(character)
         }
     }
 
     const sideToMove: Color = sideToMoveStr === "w" ? "W" : "B";
 
+    // 0 = no; 1 = yes
+    // 0b000X = Black Queenside
+    // 0b00X0 = Black Kingside
+    // 0b0X00 = White Queenside
+    // 0bX000 = White Kingside
     let castlingRights = 0; // happens if the string in the FEN is '-'
     for (let i = 0; i < castlingRightsStr.length; i++) {
         const character = castlingRightsStr[i];
-        if (character === "K") {
-            castlingRights += 8;
+        if (character === "-") {
+            break;
+        } else if (character === "K") {
+            castlingRights += 0b1000;
         } else if (character === "Q") {
-            castlingRights += 4;
+            castlingRights += 0b0100;
         } else if (character === "k") {
-            castlingRights += 2;
+            castlingRights += 0b0010;
         } else if (character === "q") {
-            castlingRights += 1;
+            castlingRights += 0b0001;
         }
     }
 
-    const enPassant
+    assert(enPassantStr === "-" || enPassantStr.length === 2), `${baseErrorMessage} enPassantStr isn't '-' or doesn't have 2 characters.`);
+    let enPassant: number = -1;
+    if (enPassantStr !== "-") {
+        enPassant = algebraicToIndex({ width: 8, height: 8 }, enPassantStr);
+    }
 
     return {
         board,
         sideToMove,
         castlingRights,
+        enPassant,
     }
 }
 
@@ -105,7 +118,7 @@ function isLowercase(s: string): boolean {
 }
 
 function squareFromFENCharacter(pieceStr: string): Square {
-	const foundPiece: Piece | undefined = gameConfig.pieces.find(value => value.symbol === pieceStr);
+    const foundPiece: Piece | undefined = gameConfig.pieces.find(value => value.symbol === pieceStr);
     assert(!!foundPiece, `${baseErrorMessage} Piece with symbol '${pieceStr}' could not be found in the game config. Available symbols are: ${gameConfig.pieces.map(p => p.symbol)}`);
 
     return {
