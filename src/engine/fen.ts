@@ -1,10 +1,15 @@
 import assert from "assert";
-import { GameConfig, GameConfigSchema, Square, State, Piece, Color } from "./types";
+import {
+    GameConfig,
+    GameConfigSchema,
+    Square,
+    State,
+    Piece,
+    Color,
+    Board,
+} from "./types";
 import gameConfigJson from "./game-config.json";
 import { algebraicToIndex } from "./utilities";
-
-// board stm castlingRights possibleEnPassant halfMove fullMove
-const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 const gameConfig: GameConfig = GameConfigSchema.parse(gameConfigJson);
 const baseErrorMessage = "Could not parse FEN:";
@@ -47,26 +52,31 @@ export function fromFEN(fen: String): State {
     );
 
     const boardWidth: number = boardStr.split("/")[0].length;
-    const boardLength: number = boardStr.split("/").length;
-    const board: Square[] = [];
+    const boardHeight: number = boardStr.split("/").length;
+    assert(
+        boardWidth === gameConfig.board.width,
+        `${baseErrorMessage} board width (${boardWidth}) doesn't match the config (${gameConfig.board.width}).`
+    );
+    assert(
+        boardHeight === gameConfig.board.height,
+        `${baseErrorMessage} board height (${boardHeight}) doesn't match the config (${gameConfig.board.height}).`
+    );
 
-    const isDigit = new RegExp("/^[1-9]{1,3}$/g");
+    const board: Board = [];
+
+    const isDigit = new RegExp("[1-9]{1,3}");
+    let currentBoardIndex = 0;
     for (let i = 0; i < boardStr.length; i++) {
         const character = boardStr[i];
         if (isDigit.test(character)) {
             const amountFillEmpty: number = parseInt(character);
-            assert(
-                i + amountFillEmpty < boardWidth,
-                `${baseErrorMessage} Amount to fill empty squares with exceeds the board width!`
-            );
             for (let j = 0; j < amountFillEmpty; j++) {
-                board[i] = { piece: null, color: null };
-                i++;
+                board[currentBoardIndex++] = null;
             }
         } else if (character === "/") {
             continue;
         } else {
-            board[i] = squareFromFENCharacter(character)
+            board[currentBoardIndex++] = squareFromFENCharacter(character);
         }
     }
 
@@ -93,33 +103,48 @@ export function fromFEN(fen: String): State {
         }
     }
 
-    assert(enPassantStr === "-" || enPassantStr.length === 2), `${baseErrorMessage} enPassantStr isn't '-' or doesn't have 2 characters.`);
+    assert(
+        enPassantStr === "-" || enPassantStr.length === 2,
+        `${baseErrorMessage} enPassantStr isn't '-' or doesn't have 2 characters.`
+    );
     let enPassant: number = -1;
     if (enPassantStr !== "-") {
         enPassant = algebraicToIndex({ width: 8, height: 8 }, enPassantStr);
     }
+
+    const halfMove: number = Number(halfMoveStr);
+    const fullMove: number = Number(fullMoveStr);
 
     return {
         board,
         sideToMove,
         castlingRights,
         enPassant,
-    }
+        halfMove,
+        fullMove,
+    };
 }
 
 function isUppercase(s: string): boolean {
-    const isUppercaseRegEx = new RegExp("/^[A-Z]$/g");
+    const isUppercaseRegEx = new RegExp("[A-Z]");
     return isUppercaseRegEx.test(s);
 }
 
 function isLowercase(s: string): boolean {
-    const isLowercaseRegEx = new RegExp("/^[a-z]$/g");
+    const isLowercaseRegEx = new RegExp("[a-z]");
     return isLowercaseRegEx.test(s);
 }
 
 function squareFromFENCharacter(pieceStr: string): Square {
-    const foundPiece: Piece | undefined = gameConfig.pieces.find(value => value.symbol === pieceStr);
-    assert(!!foundPiece, `${baseErrorMessage} Piece with symbol '${pieceStr}' could not be found in the game config. Available symbols are: ${gameConfig.pieces.map(p => p.symbol)}`);
+    const foundPiece: Piece | undefined = gameConfig.pieces.find(
+        (value) => value.symbol === pieceStr.toLowerCase()
+    );
+    assert(
+        !!foundPiece,
+        `${baseErrorMessage} Piece with symbol '${pieceStr}' could not be found in the game config. Available symbols are: ${gameConfig.pieces.map(
+            (p) => p.symbol
+        )}`
+    );
 
     return {
         piece: foundPiece,

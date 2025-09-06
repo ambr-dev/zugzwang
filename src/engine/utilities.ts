@@ -1,7 +1,10 @@
 import { assert } from "console";
-import { BoardDimensions } from "./types";
+import { Board, BoardDimensions, Square } from "./types";
 
-export function algebraicToIndex(boardDimensions: BoardDimensions, notation: string): number {
+export function algebraicToIndex(
+    boardDimensions: BoardDimensions,
+    notation: string
+): number {
     /*
         For a normal 8x8 chess board:
         8 0  1  2  3  4  5  6  7
@@ -20,7 +23,9 @@ export function algebraicToIndex(boardDimensions: BoardDimensions, notation: str
     }
 
     if (notation.length !== 2) {
-        console.error(`Notation ${notation} is '-' or doesn't have 2 characters.`);
+        console.error(
+            `Notation ${notation} is '-' or doesn't have 2 characters.`
+        );
         return -1;
     }
 
@@ -28,4 +33,28 @@ export function algebraicToIndex(boardDimensions: BoardDimensions, notation: str
     const row: number = Number(notation[1]); // The 1 in `a1` parses to array index 0
 
     return (boardDimensions.height - row) * boardDimensions.width + col;
+}
+
+export function boardToString(boardDims: BoardDimensions, board: Board): string {
+    const width = boardDims.width;
+    const height = boardDims.height;
+
+    let rows: string[] = [];
+
+    for (let r = 0; r < height; r++) {
+        let row = "";
+        for (let f = 0; f < width; f++) {
+            const idx = r * width + f;
+            const sq = board[idx];
+            if (!sq) {
+                row += ".";
+            } else {
+                const sym = sq.piece.symbol;
+                row += sq.color === "W" ? sym.toUpperCase() : sym.toLowerCase();
+            }
+        }
+        rows.push(row);
+    }
+
+    return rows.join('\n');
 }

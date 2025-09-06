@@ -32,7 +32,7 @@ export interface BoardDimensions {
 export type Color = "W" | "B";
 
 export interface State {
-    board: Square[];
+    board: Board;
     sideToMove: Color;
     enPassant: number;
     castlingRights: number;
@@ -40,9 +40,11 @@ export interface State {
     fullMove: number;
 }
 
+export type Board = (Square | null)[]
+
 export interface Square {
-    piece: Piece | null;
-    color: Color | null;
+    piece: Piece;
+    color: Color;
 }
 
 export interface Move {

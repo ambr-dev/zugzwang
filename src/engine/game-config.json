@@ -1,7 +1,7 @@
 {
     "board": {
-        "width": 8,
-        "height": 8
+        "width": 9,
+        "height": 9
     },
     "pieces": [
         {
