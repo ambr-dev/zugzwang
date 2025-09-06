@@ -73,10 +73,10 @@ export function fromFEN(fen: String): State {
     const sideToMove: Color = sideToMoveStr === "w" ? "W" : "B";
 
     // 0 = no; 1 = yes
-    // 0b000X = Black Queenside
-    // 0b00X0 = Black Kingside
-    // 0b0X00 = White Queenside
     // 0bX000 = White Kingside
+    // 0b0X00 = White Queenside
+    // 0b00X0 = Black Kingside
+    // 0b000X = Black Queenside
     let castlingRights = 0; // happens if the string in the FEN is '-'
     for (let i = 0; i < castlingRightsStr.length; i++) {
         const character = castlingRightsStr[i];
