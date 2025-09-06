@@ -27,5 +27,5 @@ export function algebraicToIndex(boardDimensions: BoardDimensions, notation: str
     const col: number = notation.charCodeAt(0) - 97; // 97 = 'a'
     const row: number = Number(notation[1]); // The 1 in `a1` parses to array index 0
 
-    return col + ((boardDimensions.height - row) * boardDimensions.width);
+    return (boardDimensions.height - row) * boardDimensions.width + col;
 }
