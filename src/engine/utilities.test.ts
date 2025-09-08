@@ -3,65 +3,35 @@ import { algebraicToIndex, indexToAlgebraic } from "./utilities";
 import { BoardDimensions } from "./types";
 
 describe("algebraicToIndex", () => {
+    const createTest = (
+        boardWidth: number,
+        boardHeight: number,
+        algebraicNotation: string,
+        expectedIndex: number
+    ) => ({
+        boardWidth,
+        boardHeight,
+        algebraicNotation,
+        expectedIndex,
+    });
     const tests = [
-        {
-            width: 1,
-            height: 1,
-            algebraic: "a1",
-            expected: 0,
-        },
-        {
-            width: 2,
-            height: 2,
-            algebraic: "a2",
-            expected: 0,
-        },
-        {
-            width: 8,
-            height: 8,
-            algebraic: "a8",
-            expected: 0,
-        },
-        {
-            width: 8,
-            height: 8,
-            algebraic: "h1",
-            expected: 63,
-        },
-        {
-            width: 9,
-            height: 9,
-            algebraic: "a9",
-            expected: 0,
-        },
-        {
-            width: 9,
-            height: 9,
-            algebraic: "i1",
-            expected: 80,
-        },
-        {
-            width: 2,
-            height: 10,
-            algebraic: 'a10',
-            expected: 0
-        },
-        {
-            width: 2,
-            height: 10,
-            algebraic: 'b1',
-            expected: 19
-        }
+        createTest(1, 1, "a1", 0),
+        createTest(2, 2, "a2", 0),
+        createTest(8, 8, "a8", 0),
+        createTest(8, 8, "h1", 63),
+        createTest(9, 9, "a9", 0),
+        createTest(9, 9, "i1", 80),
+        createTest(2, 10, "b1", 19),
     ];
 
     for (const t of tests) {
-        test(`${t.width}x${t.height}: ${t.algebraic} -> ${t.expected}`, () => {
+        test(`${t.boardWidth}x${t.boardHeight}: ${t.algebraicNotation} -> ${t.expectedIndex}`, () => {
             expect(
                 algebraicToIndex(
-                    { width: t.width, height: t.height },
-                    t.algebraic
+                    { width: t.boardWidth, height: t.boardHeight },
+                    t.algebraicNotation
                 )
-            ).toBe(t.expected);
+            ).toBe(t.expectedIndex);
         });
     }
 });

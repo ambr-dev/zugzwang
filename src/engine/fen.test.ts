@@ -23,7 +23,7 @@ describe('FEN module', () => {
         expect(actual.fullMove).toBe(1);
     });
 
-    test.skip('produces correct 9x9 board', () => {
+    test('produces correct 9x9 board', () => {
         const actual = createStateFromConfig(nineByNineconfig);
 
         const actualBoardString = boardToString({width: 9, height: 9}, actual.board);
