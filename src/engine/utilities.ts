@@ -41,6 +41,12 @@ export function algebraicToIndex(
     return (boardDimensions.height - row) * boardDimensions.width + col;
 }
 
+/**
+ * Converts array index into algebraic notation.
+ * @param {BoardDimensions} boardDimensions Dimensions of the board (e.g. a9 or j1 are possible in a 9x9)
+ * @param {number} index Array index of the board (e.g. 0 for a8, 63 for h1)
+ * @returns {string} Algebraic notation of the array index
+ */
 export function indexToAlgebraic(boardDimensions: BoardDimensions, index: number) {
     let algebraic = "";
 
@@ -53,22 +59,29 @@ export function indexToAlgebraic(boardDimensions: BoardDimensions, index: number
     return algebraic;
 }
 
-export function boardToString(boardDims: BoardDimensions, board: Board): string {
-    const width = boardDims.width;
-    const height = boardDims.height;
+/**
+ * Converts the board into a displayable format for the console. For debugging purposes only.
+ * @param {BoardDimensions} boardDimensions Dimensions of the board (e.g. a9 or j1 are possible in a 9x9)
+ * @param {Board} board Actual board with all the pieces.
+ * @returns {string} Representation of the board as a string. Similar to a FEN, just with the empty squares replaced with a dot ('.').
+ */
+export function boardToString(boardDimensions: BoardDimensions, board: Board): string {
+    const width = boardDimensions.width;
+    const height = boardDimensions.height;
 
+    // output
     let rows: string[] = [];
 
-    for (let r = 0; r < height; r++) {
+    for (let rowIndex = 0; rowIndex < height; rowIndex++) {
         let row = "";
-        for (let f = 0; f < width; f++) {
-            const idx = r * width + f;
-            const sq = board[idx];
-            if (!sq) {
+        for (let fileIndex = 0; fileIndex < width; fileIndex++) {
+            const index = rowIndex * width + fileIndex;
+            const currentSquare = board[index];
+            if (!currentSquare) {
                 row += ".";
             } else {
-                const sym = sq.piece.symbol;
-                row += sq.color === "W" ? sym.toUpperCase() : sym.toLowerCase();
+                const symbolOfCurrentSquare = currentSquare.piece.symbol;
+                row += currentSquare.color === "W" ? symbolOfCurrentSquare.toUpperCase() : symbolOfCurrentSquare.toLowerCase();
             }
         }
         rows.push(row);
