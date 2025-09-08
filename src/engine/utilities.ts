@@ -24,19 +24,20 @@ export function algebraicToIndex(
            a  b  c  d  e  f  g  h
     */
 
-    if (notation === "-" || notation.length !== 2) {
+    // "-" happens if en passant string is parsed with this function and there is no en passant possible.
+    if (notation === "-") {
         return -1;
     }
 
-    if (notation.length !== 2) {
+    if (notation.length < 2) {
         console.error(
-            `Notation ${notation} is '-' or doesn't have 2 characters.`
+            `Notation ${notation} doesn't have at least 2 characters.`
         );
         return -1;
     }
 
     const col: number = notation.charCodeAt(0) - 97; // 97 = 'a'
-    const row: number = Number(notation[1]); // The 1 in `a1` parses to array index 0
+    const row: number = Number(notation.substring(1)); // The 1 in `a1` parses to array index 0
 
     return (boardDimensions.height - row) * boardDimensions.width + col;
 }
