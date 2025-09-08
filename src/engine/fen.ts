@@ -1,21 +1,15 @@
 import assert from "assert";
-import {
-    GameConfig,
-    GameConfigSchema,
-    Square,
-    State,
-    Piece,
-    Color,
-    Board,
-} from "./types";
-import gameConfigJson from "./game-config.json";
+import { GameConfig, Square, GameState, Piece, Color, Board } from "./types";
 import { algebraicToIndex } from "./utilities";
 
-const gameConfig: GameConfig = GameConfigSchema.parse(gameConfigJson);
 const baseErrorMessage = "Could not parse FEN:";
 
-export function fromFEN(fen: String): State {
-    assert(fen?.length > 0, "FEN could not be parsed because it's empty.");
+export function createStateFromConfig(config: GameConfig): GameState {
+    const fen = config?.startingPosition;
+    assert(
+        fen?.length > 0,
+        "FEN could not be parsed because it's empty or doesn't exist."
+    );
 
     const [
         boardStr,
@@ -25,6 +19,8 @@ export function fromFEN(fen: String): State {
         halfMoveStr,
         fullMoveStr,
     ] = fen.split(" ");
+
+    // ASSERTIONS
 
     assert(
         boardStr?.length > 0,
@@ -54,15 +50,17 @@ export function fromFEN(fen: String): State {
     const boardWidth: number = boardStr.split("/")[0].length;
     const boardHeight: number = boardStr.split("/").length;
     assert(
-        boardWidth === gameConfig.board.width,
-        `${baseErrorMessage} board width (${boardWidth}) doesn't match the config (${gameConfig.board.width}).`
+        boardWidth === config.board.width,
+        `${baseErrorMessage} board width (${boardWidth}) doesn't match the config (${config.board.width}).`
     );
     assert(
-        boardHeight === gameConfig.board.height,
-        `${baseErrorMessage} board height (${boardHeight}) doesn't match the config (${gameConfig.board.height}).`
+        boardHeight === config.board.height,
+        `${baseErrorMessage} board height (${boardHeight}) doesn't match the config (${config.board.height}).`
     );
 
     const board: Board = [];
+
+    // ACTUAL BOARD ARRAY INIT
 
     const isDigit = new RegExp("[1-9]{1,3}");
     let currentBoardIndex = 0;
@@ -76,18 +74,22 @@ export function fromFEN(fen: String): State {
         } else if (character === "/") {
             continue;
         } else {
-            board[currentBoardIndex++] = squareFromFENCharacter(character);
+            board[currentBoardIndex++] = squareFromFENCharacter(config, character);
         }
     }
 
+    // SIDE TO MOVE
+
     const sideToMove: Color = sideToMoveStr === "w" ? "W" : "B";
+
+    // CASTLING RIGHTS
 
     // 0 = no; 1 = yes
     // 0bX000 = White Kingside
     // 0b0X00 = White Queenside
     // 0b00X0 = Black Kingside
     // 0b000X = Black Queenside
-    let castlingRights = 0; // happens if the string in the FEN is '-'
+    let castlingRights = 0; // value of '0' stays if the string in the FEN is '-'
     for (let i = 0; i < castlingRightsStr.length; i++) {
         const character = castlingRightsStr[i];
         if (character === "-") {
@@ -103,26 +105,82 @@ export function fromFEN(fen: String): State {
         }
     }
 
+    // EN PASSANT
+
     assert(
-        enPassantStr === "-" || enPassantStr.length === 2,
-        `${baseErrorMessage} enPassantStr isn't '-' or doesn't have 2 characters.`
+        enPassantStr === "-" || enPassantStr.length >= 2,
+        `${baseErrorMessage} enPassantStr isn't '-' or doesn't have at least 2 characters.`
     );
     let enPassant: number = -1;
     if (enPassantStr !== "-") {
-        enPassant = algebraicToIndex({ width: 8, height: 8 }, enPassantStr);
+        enPassant = algebraicToIndex(config.board, enPassantStr);
     }
+
+    // FULLMOVE & HALFMOVE COUNTERS
 
     const halfMove: number = Number(halfMoveStr);
     const fullMove: number = Number(fullMoveStr);
 
     return {
-        board,
-        sideToMove,
-        castlingRights,
-        enPassant,
-        halfMove,
-        fullMove,
+        board: board,
+        boardDimensions: {
+            width: config.board.width,
+            height: config.board.height,
+        },
+        sideToMove: sideToMove,
+        castlingRights: castlingRights,
+        enPassant: enPassant,
+        halfMove: halfMove,
+        fullMove: fullMove,
     };
+}
+
+export function createFENFromState(state: GameState) {
+    let fen = "";
+    let emptySquaresCounter = 0;
+    const boardWidth = state.boardDimensions.width;
+    const boardHeight = state.boardDimensions.height;
+
+    for (let i = 0; i < state.board.length; i++) {
+        if (i >= boardWidth) {
+            fen += "/";
+            continue;
+        }
+
+        const currentSquare = state.board[i];
+        if (!currentSquare) {
+            emptySquaresCounter++;
+            continue;
+        }
+
+        if (!!currentSquare) {
+            if (emptySquaresCounter > 0) {
+                fen += emptySquaresCounter;
+                emptySquaresCounter = 0;
+            }
+            const symbolOfPieceOnSquare =
+                currentSquare.color === "W"
+                    ? currentSquare.piece.symbol.toUpperCase()
+                    : currentSquare.piece.symbol.toLowerCase();
+            fen += symbolOfPieceOnSquare;
+        }
+    }
+
+    fen += " ";
+
+    fen += state.sideToMove.toLowerCase();
+
+    fen += " ";
+
+    let castlingRights: number = state.castlingRights;
+    fen += castlingRights & 0b1000 ? "K" : "";
+    fen += castlingRights & 0b0100 ? "Q" : "";
+    fen += castlingRights & 0b0010 ? "k" : "";
+    fen += castlingRights & 0b0001 ? "q" : "";
+
+    fen += " ";
+
+
 }
 
 function isUppercase(s: string): boolean {
@@ -135,13 +193,13 @@ function isLowercase(s: string): boolean {
     return isLowercaseRegEx.test(s);
 }
 
-function squareFromFENCharacter(pieceStr: string): Square {
-    const foundPiece: Piece | undefined = gameConfig.pieces.find(
+function squareFromFENCharacter(config: GameConfig, pieceStr: string): Square {
+    const foundPiece: Piece | undefined = config.pieces.find(
         (value) => value.symbol === pieceStr.toLowerCase()
     );
     assert(
         !!foundPiece,
-        `${baseErrorMessage} Piece with symbol '${pieceStr}' could not be found in the game config. Available symbols are: ${gameConfig.pieces.map(
+        `${baseErrorMessage} Piece with symbol '${pieceStr}' could not be found in the game config. Available symbols are: ${config.pieces.map(
             (p) => p.symbol
         )}`
     );

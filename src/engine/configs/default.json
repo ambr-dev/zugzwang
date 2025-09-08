@@ -1,0 +1,77 @@
+{
+    "board": {
+        "width": 8,
+        "height": 8
+    },
+    "pieces": [
+        {
+            "symbol": "p",
+            "pawn": true,
+            "doubleStepRank": 2,
+            "capture": [
+                [-1, 1],
+                [1, 1]
+            ],
+            "forward": [[1, 0]]
+        },
+        {
+            "symbol": "b",
+            "sliderDirections": [
+                [-1, 1],
+                [1, 1],
+                [1, -1],
+                [-1, -1]
+            ]
+        },
+        {
+            "symbol": "n",
+            "leaperOffsets": [
+                [-1, 2],
+                [1, 2],
+                [2, 1],
+                [2, -1],
+                [1, -2],
+                [-1, -2],
+                [-2, -1],
+                [-2, 1]
+            ]
+        },
+        {
+            "symbol": "r",
+            "sliderDirections": [
+                [1, 0],
+                [0, 1],
+                [-1, 0],
+                [0, -1]
+            ]
+        },
+        {
+            "symbol": "q",
+            "sliderDirections": [
+                [-1, 0],
+                [0, 1],
+                [1, 0],
+                [0, -1],
+                [-1, 1],
+                [1, 1],
+                [1, -1],
+                [-1, -1]
+            ]
+        },
+        {
+            "symbol": "k",
+            "royal": true,
+            "leaperOffsets": [
+                [-1, 0],
+                [-1, 1],
+                [0, 1],
+                [1, 1],
+                [1, 0],
+                [1, -1],
+                [0, -1],
+                [-1, -1]
+            ]
+        }
+    ],
+    "startingPosition": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+}

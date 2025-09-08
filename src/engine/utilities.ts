@@ -1,6 +1,12 @@
 import { assert } from "console";
 import { Board, BoardDimensions, Square } from "./types";
 
+/**
+ * Converts algebraic notation into an array index for the position in the board array.
+ * @param {BoardDimensions} boardDimensions Dimensions of the board (e.g. a9 or j1 are possible in a 9x9)
+ * @param {string} notation Algebraic notation of the position on the board (e.g. a1, h8, f10, g15)
+ * @returns {number} A number indicating the index of the array the algebraic notation is referencing
+ */
 export function algebraicToIndex(
     boardDimensions: BoardDimensions,
     notation: string
@@ -33,6 +39,18 @@ export function algebraicToIndex(
     const row: number = Number(notation[1]); // The 1 in `a1` parses to array index 0
 
     return (boardDimensions.height - row) * boardDimensions.width + col;
+}
+
+export function indexToAlgebraic(boardDimensions: BoardDimensions, index: number) {
+    let algebraic = "";
+
+    const col: number = index % boardDimensions.width;
+    algebraic += String.fromCharCode(97 + col);
+
+    const row: number = boardDimensions.height - Math.floor(index / boardDimensions.width);
+    algebraic += `${row}`;
+
+    return algebraic;
 }
 
 export function boardToString(boardDims: BoardDimensions, board: Board): string {

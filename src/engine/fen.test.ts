@@ -1,12 +1,16 @@
 import {describe, expect, test} from '@jest/globals';
-import { fromFEN } from './fen';
+import { createStateFromConfig } from './fen';
 import { boardToString } from './utilities';
+import eightByEightConfigJson from "./configs/default.json";
+import nineByNineConfigJson from "./configs/9-by-9.json";
+import { GameConfigSchema } from './types';
+
+const eightByEightConfig = GameConfigSchema.parse(eightByEightConfigJson);
+const nineByNineconfig = GameConfigSchema.parse(nineByNineConfigJson);
 
 describe('FEN module', () => {
     test('produces correct 8x8 board', () => {
-        // board stm castlingRights possibleEnPassant halfMove fullMove
-        const eightByEightFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-        const actual = fromFEN(eightByEightFEN);
+        const actual = createStateFromConfig(eightByEightConfig);
 
         const actualBoardString = boardToString({width: 8, height: 8}, actual.board);
         const expectedBoardString = `rnbqkbnr\npppppppp\n........\n........\n........\n........\nPPPPPPPP\nRNBQKBNR`;
@@ -20,8 +24,7 @@ describe('FEN module', () => {
     });
 
     test.skip('produces correct 9x9 board', () => {
-        const eightByEightFEN = "rnbqkqbnr/ppppppppp/9/9/9/9/9/PPPPPPPPP/RNBQKQBNR w KQkq - 0 1";
-        const actual = fromFEN(eightByEightFEN);
+        const actual = createStateFromConfig(nineByNineconfig);
 
         const actualBoardString = boardToString({width: 9, height: 9}, actual.board);
         const expectedBoardString = `rnbqkqbnr\nppppppppp\n.........\n.........\n.........\n.........\n.........\nPPPPPPPPP\nRNBQKQBNR`;

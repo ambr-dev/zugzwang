@@ -31,8 +31,9 @@ export interface BoardDimensions {
 
 export type Color = "W" | "B";
 
-export interface State {
+export interface GameState {
     board: Board;
+    boardDimensions: BoardDimensions;
     sideToMove: Color;
     enPassant: number;
     castlingRights: number;
