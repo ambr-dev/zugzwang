@@ -48,16 +48,43 @@ export function algebraicToIndex(
  * @param {number} index Array index of the board (e.g. 0 for a8, 63 for h1)
  * @returns {string} Algebraic notation of the array index
  */
-export function indexToAlgebraic(boardDimensions: BoardDimensions, index: number) {
+export function indexToAlgebraic(
+    boardDimensions: BoardDimensions,
+    index: number
+) {
     let algebraic = "";
 
     const col: number = index % boardDimensions.width;
     algebraic += String.fromCharCode(97 + col);
 
-    const row: number = boardDimensions.height - Math.floor(index / boardDimensions.width);
+    const row: number =
+        boardDimensions.height - Math.floor(index / boardDimensions.width);
     algebraic += `${row}`;
 
     return algebraic;
+}
+
+/**
+ * This function calculates the new array index based on the movement patterns provided by the piece.
+ *
+ * A `rowOffset` of 1 means that we walk down the ranks (towards rank 1).
+ * A `rowOffset` of -1 means that we walk up the ranks (towards rank maximum (8 on 8x8)).
+ * A `fileOffset` of 1 means that we walk up the files (towards file maximum ('h' on 8x8)).
+ * A `fileOffset` of -1 means that we walk up the files (towards file 'a').
+ *
+ * @param boardDimensions Dimensions of the board.
+ * @param currentIndex The current index from where the calculation will take place
+ * @param rankOffset The amount of ranks the current index should be offset by.
+ * @param fileOffset The amount of files the current index should be offset by.
+ * @returns the new index in the board array.
+ */
+export function calculateIndex(
+    boardDimensions: BoardDimensions,
+    currentIndex: number,
+    rankOffset: number,
+    fileOffset: number
+): number {
+    return currentIndex + fileOffset + rankOffset * boardDimensions.width;
 }
 
 /**
@@ -66,7 +93,10 @@ export function indexToAlgebraic(boardDimensions: BoardDimensions, index: number
  * @param {Board} board Actual board with all the pieces.
  * @returns {string} Representation of the board as a string. Similar to a FEN, just with the empty squares replaced with a dot ('.').
  */
-export function boardToString(boardDimensions: BoardDimensions, board: Board): string {
+export function boardToString(
+    boardDimensions: BoardDimensions,
+    board: Board
+): string {
     const width = boardDimensions.width;
     const height = boardDimensions.height;
 
@@ -82,11 +112,14 @@ export function boardToString(boardDimensions: BoardDimensions, board: Board): s
                 row += ".";
             } else {
                 const symbolOfCurrentSquare = currentSquare.piece.symbol;
-                row += currentSquare.color === "W" ? symbolOfCurrentSquare.toUpperCase() : symbolOfCurrentSquare.toLowerCase();
+                row +=
+                    currentSquare.color === "W"
+                        ? symbolOfCurrentSquare.toUpperCase()
+                        : symbolOfCurrentSquare.toLowerCase();
             }
         }
         rows.push(row);
     }
 
-    return rows.join('\n');
+    return rows.join("\n");
 }

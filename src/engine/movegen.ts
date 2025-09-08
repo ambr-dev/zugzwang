@@ -4,6 +4,7 @@ import { Move, GameState } from "./types";
 // 	return [];
 // }
 
-// function pseudoMoves(state: State): Move[] {
-
-// }
+function pseudoMoves(state: GameState): Move[] {
+    for ()
+    return [];
+}
