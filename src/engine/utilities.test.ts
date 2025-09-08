@@ -37,7 +37,35 @@ describe("algebraicToIndex", () => {
 });
 
 describe("indexToAlgebraic", () => {
-    test("8x8: 0 -> a8", () => {
-        expect(indexToAlgebraic({ width: 8, height: 8 }, 0)).toBe("a8");
+    const createTest = (
+        boardWidth: number,
+        boardHeight: number,
+        index: number,
+        expectedAlgebraicNotation: string
+    ) => ({
+        boardWidth,
+        boardHeight,
+        index,
+        expectedAlgebraicNotation,
     });
+    const tests = [
+        createTest(1, 1, 0, "a1"),
+        createTest(2, 2, 0, "a2"),
+        createTest(8, 8, 0, "a8"),
+        createTest(8, 8, 63, "h1"),
+        createTest(9, 9, 0, "a9"),
+        createTest(9, 9, 80, "i1"),
+        createTest(2, 10, 19, "b1"),
+    ];
+
+    for (const t of tests) {
+        test(`${t.boardWidth}x${t.boardHeight}: ${t.index} -> ${t.expectedAlgebraicNotation}`, () => {
+            expect(
+                indexToAlgebraic(
+                    { width: t.boardWidth, height: t.boardHeight },
+                    t.index
+                )
+            ).toBe(t.expectedAlgebraicNotation);
+        });
+    }
 });

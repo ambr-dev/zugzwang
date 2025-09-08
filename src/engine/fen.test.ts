@@ -35,6 +35,5 @@ describe('FEN module', () => {
         expect(actual.enPassant).toBe(-1);
         expect(actual.halfMove).toBe(0);
         expect(actual.fullMove).toBe(1);
-
     });
 });
