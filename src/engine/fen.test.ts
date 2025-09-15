@@ -12,7 +12,7 @@ describe('FEN module', () => {
     test('produces correct 8x8 board', () => {
         const actual = createStateFromConfig(eightByEightConfig);
 
-        const actualBoardString = boardToString({width: 8, height: 8}, actual.board);
+        const actualBoardString = boardToString(actual);
         const expectedBoardString = `rnbqkbnr\npppppppp\n........\n........\n........\n........\nPPPPPPPP\nRNBQKBNR`;
 
         expect(actualBoardString).toBe(expectedBoardString);
@@ -26,7 +26,7 @@ describe('FEN module', () => {
     test('produces correct 9x9 board', () => {
         const actual = createStateFromConfig(nineByNineconfig);
 
-        const actualBoardString = boardToString({width: 9, height: 9}, actual.board);
+        const actualBoardString = boardToString(actual);
         const expectedBoardString = `rnbqkqbnr\nppppppppp\n.........\n.........\n.........\n.........\n.........\nPPPPPPPPP\nRNBQKQBNR`;
 
         expect(actualBoardString).toBe(expectedBoardString);

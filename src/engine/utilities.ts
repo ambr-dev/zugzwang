@@ -1,5 +1,5 @@
 import { assert } from "console";
-import { Board, BoardDimensions, Square } from "./types";
+import { Board, BoardDimensions, Color, GameState, Piece, Square } from "./types";
 
 /**
  * Converts algebraic notation into an array index for the position in the board array.
@@ -7,21 +7,18 @@ import { Board, BoardDimensions, Square } from "./types";
  * @param {string} notation Algebraic notation of the position on the board (e.g. a1, h8, f10, g15)
  * @returns {number} A number indicating the index of the array the algebraic notation is referencing
  */
-export function algebraicToIndex(
-    boardDimensions: BoardDimensions,
-    notation: string
-): number {
+export function algebraicToIndex(boardDimensions: BoardDimensions, notation: string): number {
     /*
         For a normal 8x8 chess board:
-        8 0  1  2  3  4  5  6  7
-        7 8  9  10 11 12 13 14 15
-        6 16 17 18 19 20 21 22 23
-        5 24 25 26 27 28 29 30 31
-        4 32 33 34 35 36 37 38 39
-        3 40 41 42 43 44 45 46 47
-        2 48 49 50 51 52 53 54 55
-        1 56 57 58 59 60 61 62 63
-           a  b  c  d  e  f  g  h
+        8 56 57 58 59 60 61 62 63
+        7 48 49 50 51 52 53 54 55
+        6 40 41 42 43 44 45 46 47
+        5 32 33 34 35 36 37 38 39
+        4 24 25 26 27 28 29 30 31
+        3 16 17 18 19 20 21 22 23
+        2 8  9  10 11 12 13 14 15
+        1 0  1  2  3  4  5  6  7
+          a  b  c  d  e  f  g  h
     */
 
     // "-" happens if en passant string is parsed with this function and there is no en passant possible.
@@ -30,16 +27,14 @@ export function algebraicToIndex(
     }
 
     if (notation.length < 2) {
-        console.error(
-            `Notation ${notation} doesn't have at least 2 characters.`
-        );
+        console.error(`Notation ${notation} doesn't have at least 2 characters.`);
         return -1;
     }
 
     const col: number = notation.charCodeAt(0) - 97; // 97 = 'a'
-    const row: number = Number(notation.substring(1)); // The 1 in `a1` parses to array index 0
+    const row: number = Number(notation.substring(1)) - 1; // The 1 in `a1` parses to array index 0
 
-    return (boardDimensions.height - row) * boardDimensions.width + col;
+    return row * boardDimensions.width + col;
 }
 
 /**
@@ -48,17 +43,13 @@ export function algebraicToIndex(
  * @param {number} index Array index of the board (e.g. 0 for a8, 63 for h1)
  * @returns {string} Algebraic notation of the array index
  */
-export function indexToAlgebraic(
-    boardDimensions: BoardDimensions,
-    index: number
-) {
+export function indexToAlgebraic(boardDimensions: BoardDimensions, index: number) {
     let algebraic = "";
 
-    const col: number = index % boardDimensions.width;
+    const col: number = getFileFromIndex(boardDimensions, index);
     algebraic += String.fromCharCode(97 + col);
 
-    const row: number =
-        boardDimensions.height - Math.floor(index / boardDimensions.width);
+    const row: number = getRankFromIndex(boardDimensions, index) + 1;
     algebraic += `${row}`;
 
     return algebraic;
@@ -76,15 +67,44 @@ export function indexToAlgebraic(
  * @param currentIndex The current index from where the calculation will take place
  * @param rankOffset The amount of ranks the current index should be offset by.
  * @param fileOffset The amount of files the current index should be offset by.
- * @returns the new index in the board array.
+ * @returns the new index in the board array. `null` if out of bounds.
  */
 export function calculateIndex(
     boardDimensions: BoardDimensions,
     currentIndex: number,
     rankOffset: number,
     fileOffset: number
-): number {
+): number | null {
+    const rank = getRankFromIndex(boardDimensions, currentIndex);
+    const file = getFileFromIndex(boardDimensions, currentIndex);
+
+    const targetRank = rank + rankOffset;
+    const targetFile = file + fileOffset;
+
+    if (targetRank <= 0 || targetRank > boardDimensions.height) {
+        return null;
+    }
+    if (targetFile <= 0 || targetFile > boardDimensions.width) {
+        return null;
+    }
+
     return currentIndex + fileOffset + rankOffset * boardDimensions.width;
+}
+
+export function getRankFromIndex(boardDimensions: BoardDimensions, currentIndex: number): number {
+    return Math.floor(currentIndex / boardDimensions.width);
+}
+
+export function getFileFromIndex(boardDimensions: BoardDimensions, currentIndex: number): number {
+    return currentIndex % boardDimensions.width;
+}
+
+export function getOppositeColor(color: Color): Color {
+    return color === "W" ? "B" : "W";
+}
+
+export function isWhitesTurn(state: GameState): boolean {
+    return state.sideToMove === "W";
 }
 
 /**
@@ -93,12 +113,9 @@ export function calculateIndex(
  * @param {Board} board Actual board with all the pieces.
  * @returns {string} Representation of the board as a string. Similar to a FEN, just with the empty squares replaced with a dot ('.').
  */
-export function boardToString(
-    boardDimensions: BoardDimensions,
-    board: Board
-): string {
-    const width = boardDimensions.width;
-    const height = boardDimensions.height;
+export function boardToString(state: GameState): string {
+    const width = state.config.boardDimensions.width;
+    const height = state.config.boardDimensions.height;
 
     // output
     let rows: string[] = [];
@@ -107,7 +124,7 @@ export function boardToString(
         let row = "";
         for (let fileIndex = 0; fileIndex < width; fileIndex++) {
             const index = rowIndex * width + fileIndex;
-            const currentSquare = board[index];
+            const currentSquare = state.board[index];
             if (!currentSquare) {
                 row += ".";
             } else {
@@ -118,7 +135,7 @@ export function boardToString(
                         : symbolOfCurrentSquare.toLowerCase();
             }
         }
-        rows.push(row);
+        rows = [row, ...rows];
     }
 
     return rows.join("\n");

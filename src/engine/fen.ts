@@ -50,12 +50,12 @@ export function createStateFromConfig(config: GameConfig): GameState {
     const boardWidth: number = boardStr.split("/")[0].length;
     const boardHeight: number = boardStr.split("/").length;
     assert(
-        boardWidth === config.board.width,
-        `${baseErrorMessage} board width (${boardWidth}) doesn't match the config (${config.board.width}).`
+        boardWidth === config.boardDimensions.width,
+        `${baseErrorMessage} board width (${boardWidth}) doesn't match the config (${config.boardDimensions.width}).`
     );
     assert(
-        boardHeight === config.board.height,
-        `${baseErrorMessage} board height (${boardHeight}) doesn't match the config (${config.board.height}).`
+        boardHeight === config.boardDimensions.height,
+        `${baseErrorMessage} board height (${boardHeight}) doesn't match the config (${config.boardDimensions.height}).`
     );
 
     const board: Board = [];
@@ -64,7 +64,7 @@ export function createStateFromConfig(config: GameConfig): GameState {
 
     const isDigit = new RegExp("[1-9]{1,3}");
     let currentBoardIndex = 0;
-    for (let i = 0; i < boardStr.length; i++) {
+    for (let i = boardStr.length-1; i < 0; i--) {
         const character = boardStr[i];
         if (isDigit.test(character)) {
             const amountFillEmpty: number = parseInt(character);
@@ -113,7 +113,7 @@ export function createStateFromConfig(config: GameConfig): GameState {
     );
     let enPassant: number = -1;
     if (enPassantStr !== "-") {
-        enPassant = algebraicToIndex(config.board, enPassantStr);
+        enPassant = algebraicToIndex(config.boardDimensions, enPassantStr);
     }
 
     // FULLMOVE & HALFMOVE COUNTERS
@@ -123,23 +123,20 @@ export function createStateFromConfig(config: GameConfig): GameState {
 
     return {
         board: board,
-        boardDimensions: {
-            width: config.board.width,
-            height: config.board.height,
-        },
         sideToMove: sideToMove,
         castlingRights: castlingRights,
         enPassant: enPassant,
         halfMove: halfMove,
         fullMove: fullMove,
+        config: config,
     };
 }
 
 export function createFENFromState(state: GameState) {
     let fen = "";
     let emptySquaresCounter = 0;
-    const boardWidth = state.boardDimensions.width;
-    const boardHeight = state.boardDimensions.height;
+    const boardWidth = state.config.boardDimensions.width;
+    const boardHeight = state.config.boardDimensions.height;
 
     for (let i = 0; i < state.board.length; i++) {
         if (i >= boardWidth) {

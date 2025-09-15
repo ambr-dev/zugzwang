@@ -33,12 +33,12 @@ export type Color = "W" | "B";
 
 export interface GameState {
     board: Board;
-    boardDimensions: BoardDimensions;
     sideToMove: Color;
     enPassant: number;
     castlingRights: number;
     halfMove: number;
     fullMove: number;
+    config: GameConfig;
 }
 
 export type Board = (Square | null)[]
@@ -49,15 +49,15 @@ export interface Square {
 }
 
 export interface Move {
-    from: Square;
-    to: Square;
+    from: number;
+    to: number;
     castle: boolean;
     enPassant: boolean;
     promotion?: Piece;
 }
 
 export const GameConfigSchema = z.object({
-    board: z.object({
+    boardDimensions: z.object({
         width: z.number(),
         height: z.number(),
     }),
@@ -66,7 +66,7 @@ export const GameConfigSchema = z.object({
 });
 
 export interface GameConfig {
-    board: BoardDimensions;
+    boardDimensions: BoardDimensions;
     pieces: Piece[];
     startingPosition: string;
 }
