@@ -1,13 +1,6 @@
 import { assert } from "console";
 import { Move, GameState, Piece, Square, Board } from "./types";
-import {
-    calculateIndex,
-    getOppositeColor,
-    getFileFromIndex,
-    indexToAlgebraic,
-    isWhitesTurn,
-    getRankFromIndex,
-} from "./utilities";
+import { calculateIndex, getOppositeColor, getFile, indexToAlgebraic, isWhitesTurn, getRank } from "./utilities";
 
 // export function legalMoves(state: State): Move[] {
 // 	return [];
@@ -52,7 +45,7 @@ export function pseudoMoves(state: GameState): Move[] {
             for (let forwardOffset of forwardOffsets) {
                 // Correct the direction
                 // (in the config there's only one forward direction, regardless of color)
-                forwardOffset = isWhitesTurn(state) ? forwardOffset.map((o) => -o) : forwardOffset;
+                forwardOffset = isWhitesTurn(state) ? forwardOffset : forwardOffset.map((o) => -o);
 
                 const targetIndex: number | null = calculateIndex(
                     boardDims,
@@ -62,10 +55,10 @@ export function pseudoMoves(state: GameState): Move[] {
                 );
 
                 if (!targetIndex) continue; // OOB
-                if (!!state.board[targetIndex]) continue; // Square is occupied
+                if (isOccupied(state, targetIndex)) continue; // no need to check promotion or double step
 
                 // --- PROMOTION ---
-                const targetRank: number = getRankFromIndex(state.config.boardDimensions, targetIndex);
+                const targetRank: number = getRank(state.config.boardDimensions, targetIndex);
                 const promotionRank: number = isWhitesTurn(state) ? boardHeight : 1;
 
                 if (targetRank === promotionRank) {
@@ -93,14 +86,14 @@ export function pseudoMoves(state: GameState): Move[] {
                 }
 
                 // --- DOUBLE STEP CONSIDERATION ---
-                const isEligibleForDoubleStep =
-                    getRankFromIndex(boardDims, currentIndex) ===
-                    (isWhitesTurn(state) ? currentPiece.doubleStepRank! : boardHeight - (currentPiece.doubleStepRank! - 1));
+                const doubleStepRank = isWhitesTurn(state)
+                    ? currentPiece.doubleStepRank! - 1
+                    : boardHeight - currentPiece.doubleStepRank!;
+                const isEligibleForDoubleStep = getRank(boardDims, currentIndex) === doubleStepRank;
 
                 if (!isEligibleForDoubleStep) continue;
 
                 const doubleForwardOffset = forwardOffset.map((o) => o * 2);
-                console.log(`rank: ${getRankFromIndex(boardDims, currentIndex)}, file ${getFileFromIndex(boardDims,currentIndex)} ${doubleForwardOffset} ${currentIndex}`);
                 const doubleForwardIndex = calculateIndex(
                     boardDims,
                     currentIndex,
@@ -109,9 +102,10 @@ export function pseudoMoves(state: GameState): Move[] {
                 );
 
                 if (!doubleForwardIndex) continue; // oob
+                if (isOccupied(state, doubleForwardIndex)) continue;
 
                 // --- DOUBLE STEP PROMOTION (yes, this is possible) ---
-                const doubleTargetRank: number = getRankFromIndex(state.config.boardDimensions, targetIndex);
+                const doubleTargetRank: number = getRank(state.config.boardDimensions, targetIndex);
                 if (doubleTargetRank === promotionRank) {
                     // For each piece that is not a pawn:
                     // Add a potential move to the pseudo moves list that promotes to that piece
@@ -144,74 +138,74 @@ export function pseudoMoves(state: GameState): Move[] {
                 (index ${currentIndex}) doesn't have a capture array (is it really a pawn?).`
             );
             const captureOffsets: number[][] = currentPiece.capture!;
-            // for (const captureOffset of captureOffsets) {
-            //     // Positive offset -> towards white
-            //     // Negative offset -> towards black
-            //     const rankOffset = isWhitesTurn(state) ? -captureOffset[0] : captureOffset[0];
-            //     const fileOffset = captureOffset[1];
-            //     const targetIndex: number | null = calculateIndex(boardDims, currentIndex, rankOffset, fileOffset);
-            //     if (!targetIndex) continue; // OOB
+            for (const captureOffset of captureOffsets) {
+                // Positive offset -> towards black
+                // Negative offset -> towards white
+                const fileOffset = isWhitesTurn(state) ? captureOffset[0] : -captureOffset[0];
+                const rankOffset = isWhitesTurn(state) ? captureOffset[1] : -captureOffset[1];
+                const targetIndex: number | null = calculateIndex(boardDims, currentIndex, fileOffset, rankOffset);
+                if (!targetIndex) continue; // OOB
 
-            //     if (isEnemy(state, targetIndex)) {
-            //         pseudoMoves.push({
-            //             from: currentIndex,
-            //             to: targetIndex,
-            //             enPassant: false,
-            //             castle: false,
-            //         });
-            //     }
-            // }
+                if (isEnemy(state, targetIndex) || targetIndex === state.enPassant) {
+                    pseudoMoves.push({
+                        from: currentIndex,
+                        to: targetIndex,
+                        enPassant: false,
+                        castle: false,
+                    });
+                }
+            }
         }
 
-        // if (!!currentPiece.leaperOffsets) {
-        //     for (const leaperOffset of currentPiece.leaperOffsets) {
-        //         const targetIndex: number | null = calculateIndex(boardDims, currentIndex, leaperOffset[0], leaperOffset[1]);
+        if (!!currentPiece.leaperOffsets) {
+            for (const leaperOffset of currentPiece.leaperOffsets) {
+                const targetIndex: number | null = calculateIndex(boardDims, currentIndex, leaperOffset[0], leaperOffset[1]);
 
-        //         if (!targetIndex) continue; // OOB
-        //         if (isAlly(state, targetIndex)) continue;
+                if (!targetIndex) continue; // OOB
+                if (isAlly(state, targetIndex)) continue;
 
-        //         pseudoMoves.push({
-        //             from: currentIndex,
-        //             to: targetIndex,
-        //             castle: false,
-        //             enPassant: false,
-        //         });
-        //     }
-        // }
+                pseudoMoves.push({
+                    from: currentIndex,
+                    to: targetIndex,
+                    castle: false,
+                    enPassant: false,
+                });
+            }
+        }
 
-        // if (!!currentPiece.sliderDirections) {
-        //     for (const sliderDirection of currentPiece.sliderDirections) {
-        //         let pointer: number = currentIndex;
-        //         let nextSquare: number | null = calculateIndex(
-        //             boardDims,
-        //             currentIndex,
-        //             sliderDirection[0],
-        //             sliderDirection[1]
-        //         );
-        //         // while not oob
-        //         while (!!nextSquare) {
-        //             if (isAlly(state, nextSquare)) {
-        //                 break;
-        //             }
+        if (!!currentPiece.sliderDirections) {
+            for (const sliderDirection of currentPiece.sliderDirections) {
+                let pointer: number = currentIndex;
+                let nextSquare: number | null = calculateIndex(
+                    boardDims,
+                    currentIndex,
+                    sliderDirection[0],
+                    sliderDirection[1]
+                );
+                // while not oob
+                while (!!nextSquare) {
+                    if (isAlly(state, nextSquare)) {
+                        break;
+                    }
 
-        //             // ATP the square must be empty or an enemy,
-        //             // in which case the move has to be added...
-        //             pseudoMoves.push({
-        //                 from: currentIndex,
-        //                 to: nextSquare,
-        //                 castle: false,
-        //                 enPassant: false,
-        //             });
+                    // ATP the square must be empty or an enemy,
+                    // in which case the move has to be added...
+                    pseudoMoves.push({
+                        from: currentIndex,
+                        to: nextSquare,
+                        castle: false,
+                        enPassant: false,
+                    });
 
-        //             // ...but the raycast will end here if it's an enemy.
-        //             if (isEnemy(state, nextSquare)) {
-        //                 break;
-        //             }
+                    // ...but the raycast will end here if it's an enemy.
+                    if (isEnemy(state, nextSquare)) {
+                        break;
+                    }
 
-        //             nextSquare = calculateIndex(boardDims, nextSquare, sliderDirection[0], sliderDirection[1]);
-        //         }
-        //     }
-        // }
+                    nextSquare = calculateIndex(boardDims, nextSquare, sliderDirection[0], sliderDirection[1]);
+                }
+            }
+        }
     }
     return pseudoMoves;
 }

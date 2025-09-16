@@ -43,13 +43,13 @@ export function algebraicToIndex(boardDimensions: BoardDimensions, notation: str
  * @param {number} index Array index of the board (e.g. 0 for a8, 63 for h1)
  * @returns {string} Algebraic notation of the array index
  */
-export function indexToAlgebraic(boardDimensions: BoardDimensions, index: number) {
+export function indexToAlgebraic(boardDimensions: BoardDimensions, index: number): string {
     let algebraic = "";
 
-    const col: number = getFileFromIndex(boardDimensions, index);
+    const col: number = getFile(boardDimensions, index);
     algebraic += String.fromCharCode(97 + col);
 
-    const row: number = getRankFromIndex(boardDimensions, index) + 1;
+    const row: number = getRank(boardDimensions, index) + 1;
     algebraic += `${row}`;
 
     return algebraic;
@@ -72,31 +72,50 @@ export function indexToAlgebraic(boardDimensions: BoardDimensions, index: number
 export function calculateIndex(
     boardDimensions: BoardDimensions,
     currentIndex: number,
-    rankOffset: number,
-    fileOffset: number
+    fileOffset: number,
+    rankOffset: number
 ): number | null {
-    const rank = getRankFromIndex(boardDimensions, currentIndex);
-    const file = getFileFromIndex(boardDimensions, currentIndex);
+    const [file, rank] = get2D(boardDimensions, currentIndex);
 
-    const targetRank = rank + rankOffset;
     const targetFile = file + fileOffset;
+    const targetRank = rank + rankOffset;
 
-    if (targetRank <= 0 || targetRank > boardDimensions.height) {
+    if (targetFile < 0 || targetFile >= boardDimensions.width) {
         return null;
     }
-    if (targetFile <= 0 || targetFile > boardDimensions.width) {
+    if (targetRank < 0 || targetRank >= boardDimensions.height) {
         return null;
     }
 
     return currentIndex + fileOffset + rankOffset * boardDimensions.width;
 }
 
-export function getRankFromIndex(boardDimensions: BoardDimensions, currentIndex: number): number {
-    return Math.floor(currentIndex / boardDimensions.width);
+export function getRank(boardDimensions: BoardDimensions, index: number): number {
+    return Math.floor(index / boardDimensions.width);
 }
 
-export function getFileFromIndex(boardDimensions: BoardDimensions, currentIndex: number): number {
-    return currentIndex % boardDimensions.width;
+export function getFile(boardDimensions: BoardDimensions, index: number): number {
+    return index % boardDimensions.width;
+}
+
+/**
+ * Converts the 1D representation of the board into a 2D representation.
+ * Useful for movement generation and calculation of out of bounds moves.
+ * 
+ * Example for 8x8 board:
+ * ```
+ * 0 (a1) = [0, 0]
+ * 1 (a2) = [0, 1]
+ * 7 (h1) = [0, 7]
+ * 56 (a8) = [7, 0]
+ * 63 (h8) = [7, 7]
+ * ```
+ * @param boardDimensions 
+ * @param index 
+ * @returns a 2D representation of the 1D board array
+ */
+export function get2D(boardDimensions: BoardDimensions, index: number): [number, number] {
+    return [getFile(boardDimensions, index), getRank(boardDimensions, index)];
 }
 
 export function getOppositeColor(color: Color): Color {

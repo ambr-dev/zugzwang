@@ -36,4 +36,20 @@ describe('FEN module', () => {
         expect(actual.halfMove).toBe(0);
         expect(actual.fullMove).toBe(1);
     });
+
+    test('produces correct 8x8 board after 1. ...e4', () => {
+        const e4 = {...eightByEightConfig};
+        e4.startingPosition = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1";
+        const actual = createStateFromConfig(e4);
+
+        const actualBoardString = boardToString(actual);
+        const expectedBoardString = `rnbqkbnr\npppppppp\n........\n........\n....P...\n........\nPPPP.PPP\nRNBQKBNR`;
+
+        expect(actualBoardString).toBe(expectedBoardString);
+        expect(actual.castlingRights).toBe(15);
+        expect(actual.sideToMove).toBe("B");
+        expect(actual.enPassant).toBe(20);
+        expect(actual.halfMove).toBe(0);
+        expect(actual.fullMove).toBe(1);
+    });
 });

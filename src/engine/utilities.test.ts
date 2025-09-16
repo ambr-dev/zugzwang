@@ -1,5 +1,5 @@
 import { describe, expect, test } from "@jest/globals";
-import { algebraicToIndex, getFileFromIndex, getRankFromIndex, indexToAlgebraic } from "./utilities";
+import { algebraicToIndex, getFile, getRank, indexToAlgebraic } from "./utilities";
 import { BoardDimensions } from "./types";
 
 describe("algebraicToIndex", () => {
@@ -39,7 +39,7 @@ describe("algebraicToIndex", () => {
 });
 
 describe("indexToAlgebraic", () => {
-    const createTest = (
+    const createTestContext = (
         boardWidth: number,
         boardHeight: number,
         index: number,
@@ -51,14 +51,14 @@ describe("indexToAlgebraic", () => {
         expectedAlgebraicNotation,
     });
     const tests = [
-        createTest(8, 8, 0, "a1"),
-        createTest(8, 8, 56, "a8"),
-        createTest(8, 8, 7, "h1"),
-        createTest(8, 8, 63, "h8"),
-        createTest(1, 1, 0, "a1"),
-        createTest(2, 2, 0, "a1"),
-        createTest(9, 9, 80, "i9"),
-        createTest(2, 10, 19, "b10"),
+        createTestContext(8, 8, 0, "a1"),
+        createTestContext(8, 8, 56, "a8"),
+        createTestContext(8, 8, 7, "h1"),
+        createTestContext(8, 8, 63, "h8"),
+        createTestContext(1, 1, 0, "a1"),
+        createTestContext(2, 2, 0, "a1"),
+        createTestContext(9, 9, 80, "i9"),
+        createTestContext(2, 10, 19, "b10"),
     ];
 
     for (const t of tests) {
@@ -76,29 +76,29 @@ describe("indexToAlgebraic", () => {
 describe("getRankFromIndex", () => {
     const eightByEight: BoardDimensions = {width: 8, height: 8};
     test("8x8", () => {
-        expect(getRankFromIndex(eightByEight, 0)).toBe(0);
-        expect(getRankFromIndex(eightByEight, 1)).toBe(0);
-        expect(getRankFromIndex(eightByEight, 2)).toBe(0);
-        expect(getRankFromIndex(eightByEight, 3)).toBe(0);
+        expect(getRank(eightByEight, 0)).toBe(0);
+        expect(getRank(eightByEight, 1)).toBe(0);
+        expect(getRank(eightByEight, 2)).toBe(0);
+        expect(getRank(eightByEight, 3)).toBe(0);
 
-        expect(getRankFromIndex(eightByEight, 8)).toBe(1);
-        expect(getRankFromIndex(eightByEight, 9)).toBe(1);
-        expect(getRankFromIndex(eightByEight, 10)).toBe(1);
-        expect(getRankFromIndex(eightByEight, 11)).toBe(1);
+        expect(getRank(eightByEight, 8)).toBe(1);
+        expect(getRank(eightByEight, 9)).toBe(1);
+        expect(getRank(eightByEight, 10)).toBe(1);
+        expect(getRank(eightByEight, 11)).toBe(1);
     });
 });
 
 describe("getFileFromIndex", () => {
     const eightByEight: BoardDimensions = {width: 8, height: 8};
     test("8x8", () => {
-        expect(getFileFromIndex(eightByEight, 0)).toBe(0);
-        expect(getFileFromIndex(eightByEight, 1)).toBe(1);
-        expect(getFileFromIndex(eightByEight, 2)).toBe(2);
-        expect(getFileFromIndex(eightByEight, 3)).toBe(3);
+        expect(getFile(eightByEight, 0)).toBe(0);
+        expect(getFile(eightByEight, 1)).toBe(1);
+        expect(getFile(eightByEight, 2)).toBe(2);
+        expect(getFile(eightByEight, 3)).toBe(3);
 
-        expect(getFileFromIndex(eightByEight, 8)).toBe(0);
-        expect(getFileFromIndex(eightByEight, 9)).toBe(1);
-        expect(getFileFromIndex(eightByEight, 10)).toBe(2);
-        expect(getFileFromIndex(eightByEight, 11)).toBe(3);
+        expect(getFile(eightByEight, 8)).toBe(0);
+        expect(getFile(eightByEight, 9)).toBe(1);
+        expect(getFile(eightByEight, 10)).toBe(2);
+        expect(getFile(eightByEight, 11)).toBe(3);
     });
 });

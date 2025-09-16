@@ -6,48 +6,20 @@ const baseErrorMessage = "Could not parse FEN:";
 
 export function createStateFromConfig(config: GameConfig): GameState {
     const fen = config?.startingPosition;
-    assert(
-        fen?.length > 0,
-        "FEN could not be parsed because it's empty or doesn't exist."
-    );
+    assert(fen?.length > 0, "FEN could not be parsed because it's empty or doesn't exist.");
 
-    const [
-        boardStr,
-        sideToMoveStr,
-        castlingRightsStr,
-        enPassantStr,
-        halfMoveStr,
-        fullMoveStr,
-    ] = fen.split(" ");
+    const [boardStr, sideToMoveStr, castlingRightsStr, enPassantStr, halfMoveStr, fullMoveStr] = fen.split(" ");
 
     // ASSERTIONS
 
-    assert(
-        boardStr?.length > 0,
-        `${baseErrorMessage} boardString empty or missing.`
-    );
-    assert(
-        sideToMoveStr?.length > 0,
-        `${baseErrorMessage} sideToMoveStr empty or missing.`
-    );
-    assert(
-        castlingRightsStr?.length > 0,
-        `${baseErrorMessage} castlingRightsStr empty or missing.`
-    );
-    assert(
-        enPassantStr?.length > 0,
-        `${baseErrorMessage} enPassantStr empty or missing.`
-    );
-    assert(
-        halfMoveStr?.length > 0,
-        `${baseErrorMessage} halfMoveStr empty or missing.`
-    );
-    assert(
-        fullMoveStr?.length > 0,
-        `${baseErrorMessage} fullMoveStr empty or missing.`
-    );
+    assert(boardStr?.length > 0, `${baseErrorMessage} boardString empty or missing.`);
+    assert(sideToMoveStr?.length > 0, `${baseErrorMessage} sideToMoveStr empty or missing.`);
+    assert(castlingRightsStr?.length > 0, `${baseErrorMessage} castlingRightsStr empty or missing.`);
+    assert(enPassantStr?.length > 0, `${baseErrorMessage} enPassantStr empty or missing.`);
+    assert(halfMoveStr?.length > 0, `${baseErrorMessage} halfMoveStr empty or missing.`);
+    assert(fullMoveStr?.length > 0, `${baseErrorMessage} fullMoveStr empty or missing.`);
 
-    const boardWidth: number = boardStr.split("/")[0].length;
+    const boardWidth: number = getBoardWidth(boardStr.split("/")[0]);
     const boardHeight: number = boardStr.split("/").length;
     assert(
         boardWidth === config.boardDimensions.width,
@@ -63,18 +35,20 @@ export function createStateFromConfig(config: GameConfig): GameState {
     // ACTUAL BOARD ARRAY INIT
 
     const isDigit = new RegExp("[1-9]{1,3}");
+    const rows: string[] = boardStr.split("/");
     let currentBoardIndex = 0;
-    for (let i = boardStr.length-1; i < 0; i--) {
-        const character = boardStr[i];
-        if (isDigit.test(character)) {
-            const amountFillEmpty: number = parseInt(character);
-            for (let j = 0; j < amountFillEmpty; j++) {
-                board[currentBoardIndex++] = null;
+    for (let i = rows.length - 1; i >= 0; i--) {
+        const row: string = rows[i];
+        for (let j = 0; j < row.length; j++) {
+            const character: string = row[j];
+            if (isDigit.test(character)) {
+                const amountFillEmpty: number = parseInt(character);
+                for (let k = 0; k < amountFillEmpty; k++) {
+                    board[currentBoardIndex++] = null;
+                }
+            } else {
+                board[currentBoardIndex++] = squareFromFENCharacter(config, character);
             }
-        } else if (character === "/") {
-            continue;
-        } else {
-            board[currentBoardIndex++] = squareFromFENCharacter(config, character);
         }
     }
 
@@ -176,8 +150,6 @@ export function createFENFromState(state: GameState) {
     fen += castlingRights & 0b0001 ? "q" : "";
 
     fen += " ";
-
-
 }
 
 function isUppercase(s: string): boolean {
@@ -191,9 +163,7 @@ function isLowercase(s: string): boolean {
 }
 
 function squareFromFENCharacter(config: GameConfig, pieceStr: string): Square {
-    const foundPiece: Piece | undefined = config.pieces.find(
-        (value) => value.symbol === pieceStr.toLowerCase()
-    );
+    const foundPiece: Piece | undefined = config.pieces.find((value) => value.symbol === pieceStr.toLowerCase());
     assert(
         !!foundPiece,
         `${baseErrorMessage} Piece with symbol '${pieceStr}' could not be found in the game config. Available symbols are: ${config.pieces.map(
@@ -205,4 +175,18 @@ function squareFromFENCharacter(config: GameConfig, pieceStr: string): Square {
         piece: foundPiece,
         color: isLowercase(pieceStr) ? "B" : "W",
     };
+}
+
+function getBoardWidth(row: string): number {
+    let width = 0;
+    const isDigit = new RegExp('[1-9]+');
+    for (let i = 0; i < row.length; i++) {
+        const character = row[i];
+        if (isDigit.test(character)) {
+            width += Number(character);
+        } else {
+            width++;
+        }
+    }
+    return width;
 }
