@@ -1,6 +1,6 @@
 import { assert } from "console";
 import { Move, GameState, Piece, Square, Board } from "./types";
-import { calculateIndex, getOppositeColor, getFile, indexToAlgebraic, isWhitesTurn, getRank } from "./utilities";
+import { calculateIndex, getOppositeColor, getFile, indexToAlgebraic, isWhitesTurn, getRank, isCastlingAllowed, areArraysEqual } from "./utilities";
 
 // export function legalMoves(state: State): Move[] {
 // 	return [];
@@ -146,11 +146,12 @@ export function pseudoMoves(state: GameState): Move[] {
                 const targetIndex: number | null = calculateIndex(boardDims, currentIndex, fileOffset, rankOffset);
                 if (!targetIndex) continue; // OOB
 
-                if (isEnemy(state, targetIndex) || targetIndex === state.enPassant) {
+                const isTargetEP = targetIndex === state.enPassant;
+                if (isEnemy(state, targetIndex) || isTargetEP) {
                     pseudoMoves.push({
                         from: currentIndex,
                         to: targetIndex,
-                        enPassant: false,
+                        enPassant: isTargetEP,
                         castle: false,
                     });
                 }
@@ -206,6 +207,46 @@ export function pseudoMoves(state: GameState): Move[] {
                 }
             }
         }
+
+        // --- CASTLING ---
+        if (currentPiece.royal && !isSquareAttacked(state, currentIndex)) {
+            const isAllowedCastleKing = isCastlingAllowed(state.castlingRights, currentSquare.color, "K");
+            const isAllowedCastleQueen = isCastlingAllowed(state.castlingRights, currentSquare.color, "Q");
+
+            if (!isAllowedCastleKing && !isAllowedCastleQueen) continue;
+
+            const doRaycast = (raycastDirection: -1 | 1) => {
+                // raycast for obstructing pieces
+                let raycastIndex = calculateIndex(boardDims, currentIndex, raycastDirection, 0);
+                // while inbounds 
+                // (it's not `!!raycastIndex` because !!0 would be false!!!)
+                while (raycastIndex !== null) {
+                    const raycastSquare: Square | null = state.board[raycastIndex];
+                    if (!raycastSquare) {
+                        if (isSquareAttacked(state, raycastIndex)) {
+                            break; // can't castle into check! abort!
+                        }
+                        // empty square! continue...
+                        raycastIndex = calculateIndex(boardDims, raycastIndex, raycastDirection, 0);
+                        continue; 
+                    }
+                    if (raycastSquare.color !== state.sideToMove || raycastSquare.piece.symbol !== "r") {
+                        break; // obstacle! abort!
+                    } 
+                    // Rook found!
+                    pseudoMoves.push({
+                        from: currentIndex,
+                        to: currentIndex + (raycastDirection * 2), // royal moves 2 squares
+                        castle: true,
+                        enPassant: false,
+                    });
+                    break;
+                }
+            }
+
+            if (isAllowedCastleKing) doRaycast(1);
+            if (isAllowedCastleQueen) doRaycast(-1);
+        }
     }
     return pseudoMoves;
 }
@@ -224,4 +265,94 @@ function isEnemy(state: GameState, index: number): boolean {
 
 function isAlly(state: GameState, index: number): boolean {
     return state.board[index]?.color === state.sideToMove;
+}
+
+export function isSquareAttacked(state: GameState, index: number): boolean {
+    // Collect all possible movement sets
+    const allPieces = state.config.pieces;
+    let sliderDirections: number[][][] = []; // cursed
+    let leaperOffsets: number[][][] = []; // also cursed
+    let pawnCaptures: number[][][] = []; // still cursed
+    for (const piece of allPieces) {
+        if (!!piece.sliderDirections) sliderDirections.push(piece.sliderDirections);
+        if (!!piece.leaperOffsets) leaperOffsets.push(piece.leaperOffsets);
+        if (!!piece.capture) pawnCaptures.push(piece.capture);
+    }
+
+    // Iterate through all of them and raycast
+    // to find an enemy piece eyeing this square
+    for (const currentSlider of sliderDirections) {
+        for (const currentDirection of currentSlider) {
+            // Raycast direction = mirrored slider direction
+            const flippedDirection = currentDirection.map(d => -d);
+            let i = calculateIndex(state.config.boardDimensions, index, flippedDirection[0], flippedDirection[1]);
+            // while inbounds
+            while (i !== null) {
+                if (isEmpty(state, i)) {
+                    i = calculateIndex(state.config.boardDimensions, i, flippedDirection[0], flippedDirection[1]);
+                    continue;
+                } 
+
+                if (isAlly(state, i)) {
+                    break;
+                }
+
+                const currentSquare = state.board[i];
+                const isPieceNotASlider = !currentSquare!.piece.sliderDirections;
+                if (isPieceNotASlider) {
+                    break;
+                }
+                
+                const pieceSeesSquare = currentSquare!.piece.sliderDirections!.find((d) => areArraysEqual(d, currentDirection));
+                if (!!pieceSeesSquare) {
+                    return true;
+                }
+
+                i = calculateIndex(state.config.boardDimensions, i, flippedDirection[0], flippedDirection[1]);
+            }
+        }
+    }
+
+    for (const currentLeaper of leaperOffsets) {
+        for (const currentLeapOffset of currentLeaper) {
+            const flippedLeapOffset = currentLeapOffset.map((o) => -o);
+            const targetIndex = calculateIndex(state.config.boardDimensions, index, flippedLeapOffset[0], flippedLeapOffset[1]);
+
+            // oob
+            if (targetIndex === null) continue; 
+            if (isEmpty(state, targetIndex)) continue;
+            if (isAlly(state, targetIndex)) continue;
+
+            const currentSquare = state.board[targetIndex];
+            const isPieceNotALeaper = !currentSquare!.piece.leaperOffsets;
+            if (isPieceNotALeaper) continue;
+
+            const pieceSeesSquare = currentSquare!.piece.leaperOffsets!.find((l) => areArraysEqual(l, currentLeapOffset));
+            if (!!pieceSeesSquare) {
+                return true;
+            }
+        }
+    }
+
+    for (const currentPawn of pawnCaptures) {
+        for (const currentCaptureOffset of currentPawn) {
+            const flippedOffset = isWhitesTurn(state) ? currentCaptureOffset.map((o) => -o) : currentCaptureOffset;
+
+            const targetIndex = calculateIndex(state.config.boardDimensions, index, flippedOffset[0], flippedOffset[1]);
+            if (targetIndex === null) continue;
+            if (isEmpty(state, targetIndex)) continue; 
+            if (isAlly(state, targetIndex)) continue;
+
+            const currentSquare = state.board[targetIndex];
+            const isPieceNotAPawn = !currentSquare!.piece.capture;
+            if (isPieceNotAPawn) continue;
+
+            const pieceSeesSquare = currentSquare!.piece.capture!.find((c) => areArraysEqual(c, currentCaptureOffset));
+            if (!!pieceSeesSquare) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }

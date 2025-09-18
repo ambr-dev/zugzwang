@@ -1,5 +1,5 @@
 import { assert } from "console";
-import { Board, BoardDimensions, Color, GameState, Piece, Square } from "./types";
+import { Board, BoardDimensions, CASTLE_MASK, Color, GameState, Piece, Square } from "./types";
 
 /**
  * Converts algebraic notation into an array index for the position in the board array.
@@ -126,6 +126,11 @@ export function isWhitesTurn(state: GameState): boolean {
     return state.sideToMove === "W";
 }
 
+export function isCastlingAllowed(castlingRights: number, color: Color, side: "K" | "Q") {
+    const mask = CASTLE_MASK[color][side];
+    return (castlingRights & mask) !== 0;
+}
+
 /**
  * Converts the board into a displayable format for the console. For debugging purposes only.
  * @param {BoardDimensions} boardDimensions Dimensions of the board (e.g. a9 or j1 are possible in a 9x9)
@@ -158,4 +163,8 @@ export function boardToString(state: GameState): string {
     }
 
     return rows.join("\n");
+}
+
+export function areArraysEqual(a: number[], b: number[]): boolean {
+    return JSON.stringify(Array.from(a).sort()) == JSON.stringify(Array.from(b).sort());
 }

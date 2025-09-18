@@ -41,6 +41,10 @@ export interface GameState {
     config: GameConfig;
 }
 
+// Bitmasks for castling
+export const WK = 8, WQ = 4, BK = 2, BQ = 1 as const;
+export const CASTLE_MASK = { W: { K: WK, Q: WQ }, B: { K: BK, Q: BQ } } as const;
+
 export type Board = (Square | null)[]
 
 export interface Square {
