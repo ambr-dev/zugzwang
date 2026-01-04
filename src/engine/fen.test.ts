@@ -16,9 +16,12 @@ describe('FEN module', () => {
         const expectedBoardString = `rnbqkbnr\npppppppp\n........\n........\n........\n........\nPPPPPPPP\nRNBQKBNR`;
 
         expect(actualBoardString).toBe(expectedBoardString);
-        expect(actual.castlingRights).toBe(15);
+        expect(actual.castling).toContainEqual("w-K");
+        expect(actual.castling).toContainEqual("w-Q");
+        expect(actual.castling).toContainEqual("b-K");
+        expect(actual.castling).toContainEqual("b-Q");
         expect(actual.sideToMove).toBe("W");
-        expect(actual.enPassant).toBe(-1);
+        expect(actual.enPassant).toBeUndefined();
         expect(actual.halfMove).toBe(0);
         expect(actual.fullMove).toBe(1);
     });
@@ -30,25 +33,40 @@ describe('FEN module', () => {
         const expectedBoardString = `rnbqkqbnr\nppppppppp\n.........\n.........\n.........\n.........\n.........\nPPPPPPPPP\nRNBQKQBNR`;
 
         expect(actualBoardString).toBe(expectedBoardString);
-        expect(actual.castlingRights).toBe(15);
+        expect(actual.castling).toContainEqual("w-K");
+        expect(actual.castling).toContainEqual("w-Q");
+        expect(actual.castling).toContainEqual("b-K");
+        expect(actual.castling).toContainEqual("b-Q");
         expect(actual.sideToMove).toBe("W");
-        expect(actual.enPassant).toBe(-1);
+        expect(actual.enPassant).toBeUndefined();
         expect(actual.halfMove).toBe(0);
         expect(actual.fullMove).toBe(1);
     });
 
     test('produces correct 8x8 board after 1. ...e4', () => {
         const e4 = {...eightByEightConfig};
-        e4.startingPosition = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1";
+        e4.startingPosition = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR";
+        e4.sideToMove = "B";
+        e4.enPassant = {
+            captureIndex: 20,
+            deleteIndex: 28
+        };
         const actual = createStateFromConfig(e4);
 
         const actualBoardString = boardToString(actual);
         const expectedBoardString = `rnbqkbnr\npppppppp\n........\n........\n....P...\n........\nPPPP.PPP\nRNBQKBNR`;
 
         expect(actualBoardString).toBe(expectedBoardString);
-        expect(actual.castlingRights).toBe(15);
+        expect(actual.castling).toContainEqual("w-K");
+        expect(actual.castling).toContainEqual("w-Q");
+        expect(actual.castling).toContainEqual("b-K");
+        expect(actual.castling).toContainEqual("b-Q");
         expect(actual.sideToMove).toBe("B");
-        expect(actual.enPassant).toBe(20);
+        expect(actual.enPassant).not.toBeUndefined();
+        expect(actual.enPassant).toEqual({
+            captureIndex: 20,
+            deleteIndex: 28
+        });
         expect(actual.halfMove).toBe(0);
         expect(actual.fullMove).toBe(1);
     });

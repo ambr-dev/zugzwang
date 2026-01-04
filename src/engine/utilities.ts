@@ -1,5 +1,4 @@
-import { assert } from "console";
-import { Board, BoardDimensions, CASTLE_MASK, Color, GameState, Piece, Square } from "./types";
+import { BoardDimensions, CastlingDefinition, Color, GameState } from "./types";
 
 /**
  * Converts algebraic notation into an array index for the position in the board array.
@@ -64,18 +63,24 @@ export function indexToAlgebraic(boardDimensions: BoardDimensions, index: number
  * A `fileOffset` of -1 means that we walk up the files (towards file 'a').
  *
  * @param boardDimensions Dimensions of the board.
- * @param currentIndex The current index from where the calculation will take place
+ * @param index The current index from where the calculation will take place
  * @param rankOffset The amount of ranks the current index should be offset by.
  * @param fileOffset The amount of files the current index should be offset by.
  * @returns the new index in the board array. `null` if out of bounds.
  */
 export function calculateIndex(
     boardDimensions: BoardDimensions,
-    currentIndex: number,
+    index: number,
     fileOffset: number,
     rankOffset: number
 ): number | null {
-    const [file, rank] = get2D(boardDimensions, currentIndex);
+    if (index < 0) {
+        throw new Error(`
+            Couldn't calculate index offset [df: ${fileOffset}, dr: ${rankOffset}]
+            for index ${index}: Index is smaller than 0.
+        `);
+    }
+    const [file, rank] = get2D(boardDimensions, index);
 
     const targetFile = file + fileOffset;
     const targetRank = rank + rankOffset;
@@ -87,7 +92,7 @@ export function calculateIndex(
         return null;
     }
 
-    return currentIndex + fileOffset + rankOffset * boardDimensions.width;
+    return index + fileOffset + rankOffset * boardDimensions.width;
 }
 
 export function getRank(boardDimensions: BoardDimensions, index: number): number {
@@ -101,7 +106,7 @@ export function getFile(boardDimensions: BoardDimensions, index: number): number
 /**
  * Converts the 1D representation of the board into a 2D representation.
  * Useful for movement generation and calculation of out of bounds moves.
- * 
+ *
  * Example for 8x8 board:
  * ```
  * 0 (a1) = [0, 0]
@@ -110,8 +115,8 @@ export function getFile(boardDimensions: BoardDimensions, index: number): number
  * 56 (a8) = [7, 0]
  * 63 (h8) = [7, 7]
  * ```
- * @param boardDimensions 
- * @param index 
+ * @param boardDimensions
+ * @param index
  * @returns a 2D representation of the 1D board array
  */
 export function get2D(boardDimensions: BoardDimensions, index: number): [number, number] {
@@ -124,11 +129,6 @@ export function getOppositeColor(color: Color): Color {
 
 export function isWhitesTurn(state: GameState): boolean {
     return state.sideToMove === "W";
-}
-
-export function isCastlingAllowed(castlingRights: number, color: Color, side: "K" | "Q") {
-    const mask = CASTLE_MASK[color][side];
-    return (castlingRights & mask) !== 0;
 }
 
 /**
@@ -154,9 +154,7 @@ export function boardToString(state: GameState): string {
             } else {
                 const symbolOfCurrentSquare = currentSquare.piece.symbol;
                 row +=
-                    currentSquare.color === "W"
-                        ? symbolOfCurrentSquare.toUpperCase()
-                        : symbolOfCurrentSquare.toLowerCase();
+                    currentSquare.color === "W" ? symbolOfCurrentSquare.toUpperCase() : symbolOfCurrentSquare.toLowerCase();
             }
         }
         rows = [row, ...rows];
@@ -167,4 +165,12 @@ export function boardToString(state: GameState): string {
 
 export function areArraysEqual(a: number[], b: number[]): boolean {
     return JSON.stringify(Array.from(a).sort()) == JSON.stringify(Array.from(b).sort());
+}
+
+export function getCastlingDefinition(state: GameState, castlingDefinitionId: string): CastlingDefinition | null {
+    return state.config.castling?.routes.find((d) => d.id === castlingDefinitionId) ?? null;
+}
+
+export function atoi(algebraicNotation: string) {
+    return algebraicToIndex({ width: 8, height: 8 }, algebraicNotation);
 }

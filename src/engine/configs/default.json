@@ -73,5 +73,57 @@
             ]
         }
     ],
-    "startingPosition": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    "startingPosition": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR",
+    "sideToMove": "W",
+    "castling": {
+        "available": ["w-K", "w-Q", "b-K", "b-Q"],
+        "routes": [
+            {
+                "id": "w-K",
+                "color": "W",
+                "rookSymbol": "r",
+                "royalSymbol": "k",
+                "rookFrom": 7,
+                "rookTo": 5,
+                "royalFrom": 4,
+                "royalTo": 6,
+                "royalPath": [5, 6]
+            },
+            {
+                "id": "w-Q",
+                "color": "W",
+                "rookSymbol": "r",
+                "royalSymbol": "k",
+                "rookFrom": 0,
+                "rookTo": 3,
+                "royalFrom": 4,
+                "royalTo": 2,
+                "royalPath": [3, 2, 1]
+            },
+            {
+                "id": "b-K",
+                "color": "B",
+                "rookSymbol": "r",
+                "royalSymbol": "k",
+                "rookFrom": 63,
+                "rookTo": 61,
+                "royalFrom": 60,
+                "royalTo": 62,
+                "royalPath": [61, 62]
+            },
+            {
+                "id": "b-Q",
+                "color": "B",
+                "rookSymbol": "r",
+                "royalSymbol": "k",
+                "rookFrom": 56,
+                "rookTo": 59,
+                "royalFrom": 60,
+                "royalTo": 58,
+                "royalPath": [59, 58, 57]
+            }
+        ]
+    },
+    "halfMove": 0,
+    "fullMove": 1
 }

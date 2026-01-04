@@ -1,26 +1,14 @@
 import assert from "assert";
-import { GameConfig, Square, GameState, Piece, Color, Board } from "./types";
-import { algebraicToIndex } from "./utilities";
+import { Board, GameConfig, GameState, Piece, Square } from "./types";
 
-const baseErrorMessage = "Could not parse FEN:";
+const baseErrorMessage = "Could not parse config:";
 
 export function createStateFromConfig(config: GameConfig): GameState {
-    const fen = config?.startingPosition;
-    assert(fen?.length > 0, "FEN could not be parsed because it's empty or doesn't exist.");
-
-    const [boardStr, sideToMoveStr, castlingRightsStr, enPassantStr, halfMoveStr, fullMoveStr] = fen.split(" ");
-
     // ASSERTIONS
+    assert(config.startingPosition?.length > 0, `${baseErrorMessage} starting position string empty or missing.`);
 
-    assert(boardStr?.length > 0, `${baseErrorMessage} boardString empty or missing.`);
-    assert(sideToMoveStr?.length > 0, `${baseErrorMessage} sideToMoveStr empty or missing.`);
-    assert(castlingRightsStr?.length > 0, `${baseErrorMessage} castlingRightsStr empty or missing.`);
-    assert(enPassantStr?.length > 0, `${baseErrorMessage} enPassantStr empty or missing.`);
-    assert(halfMoveStr?.length > 0, `${baseErrorMessage} halfMoveStr empty or missing.`);
-    assert(fullMoveStr?.length > 0, `${baseErrorMessage} fullMoveStr empty or missing.`);
-
-    const boardWidth: number = getBoardWidth(boardStr.split("/")[0]);
-    const boardHeight: number = boardStr.split("/").length;
+    const boardWidth: number = getBoardWidth(config.startingPosition.split("/")[0]);
+    const boardHeight: number = config.startingPosition.split("/").length;
     assert(
         boardWidth === config.boardDimensions.width,
         `${baseErrorMessage} board width (${boardWidth}) doesn't match the config (${config.boardDimensions.width}).`
@@ -30,126 +18,26 @@ export function createStateFromConfig(config: GameConfig): GameState {
         `${baseErrorMessage} board height (${boardHeight}) doesn't match the config (${config.boardDimensions.height}).`
     );
 
-    const board: Board = [];
-
-    // ACTUAL BOARD ARRAY INIT
-
-    const isDigit = new RegExp("[1-9]{1,3}");
-    const rows: string[] = boardStr.split("/");
-    let currentBoardIndex = 0;
-    for (let i = rows.length - 1; i >= 0; i--) {
-        const row: string = rows[i];
-        for (let j = 0; j < row.length; j++) {
-            const character: string = row[j];
-            if (isDigit.test(character)) {
-                const amountFillEmpty: number = parseInt(character);
-                for (let k = 0; k < amountFillEmpty; k++) {
-                    board[currentBoardIndex++] = null;
-                }
-            } else {
-                board[currentBoardIndex++] = squareFromFENCharacter(config, character);
-            }
+    if (config.castling) {
+        for (let castlingRuleId of config.castling.available) {
+            assert(
+                config.castling.routes.filter((r) => r.id === castlingRuleId).length >= 0,
+                `${baseErrorMessage} castling rule id ${castlingRuleId} doesn't exist in config castling rule list.`
+            );
         }
     }
 
-    // SIDE TO MOVE
-
-    const sideToMove: Color = sideToMoveStr === "w" ? "W" : "B";
-
-    // CASTLING RIGHTS
-
-    // 0 = no; 1 = yes
-    // 0bX000 = White Kingside
-    // 0b0X00 = White Queenside
-    // 0b00X0 = Black Kingside
-    // 0b000X = Black Queenside
-    let castlingRights = 0; // value of '0' stays if the string in the FEN is '-'
-    for (let i = 0; i < castlingRightsStr.length; i++) {
-        const character = castlingRightsStr[i];
-        if (character === "-") {
-            break;
-        } else if (character === "K") {
-            castlingRights += 0b1000;
-        } else if (character === "Q") {
-            castlingRights += 0b0100;
-        } else if (character === "k") {
-            castlingRights += 0b0010;
-        } else if (character === "q") {
-            castlingRights += 0b0001;
-        }
-    }
-
-    // EN PASSANT
-
-    assert(
-        enPassantStr === "-" || enPassantStr.length >= 2,
-        `${baseErrorMessage} enPassantStr isn't '-' or doesn't have at least 2 characters.`
-    );
-    let enPassant: number = -1;
-    if (enPassantStr !== "-") {
-        enPassant = algebraicToIndex(config.boardDimensions, enPassantStr);
-    }
-
-    // FULLMOVE & HALFMOVE COUNTERS
-
-    const halfMove: number = Number(halfMoveStr);
-    const fullMove: number = Number(fullMoveStr);
+    const board = parseBoard(config.startingPosition, config);
 
     return {
         board: board,
-        sideToMove: sideToMove,
-        castlingRights: castlingRights,
-        enPassant: enPassant,
-        halfMove: halfMove,
-        fullMove: fullMove,
-        config: config,
+        sideToMove: config.sideToMove === "W" ? "W" : "B",
+        castling: config.castling?.available ?? [],
+        enPassant: config.enPassant,
+        halfMove: config.halfMove,
+        fullMove: config.fullMove,
+        config,
     };
-}
-
-export function createFENFromState(state: GameState) {
-    let fen = "";
-    let emptySquaresCounter = 0;
-    const boardWidth = state.config.boardDimensions.width;
-    const boardHeight = state.config.boardDimensions.height;
-
-    for (let i = 0; i < state.board.length; i++) {
-        if (i >= boardWidth) {
-            fen += "/";
-            continue;
-        }
-
-        const currentSquare = state.board[i];
-        if (!currentSquare) {
-            emptySquaresCounter++;
-            continue;
-        }
-
-        if (!!currentSquare) {
-            if (emptySquaresCounter > 0) {
-                fen += emptySquaresCounter;
-                emptySquaresCounter = 0;
-            }
-            const symbolOfPieceOnSquare =
-                currentSquare.color === "W"
-                    ? currentSquare.piece.symbol.toUpperCase()
-                    : currentSquare.piece.symbol.toLowerCase();
-            fen += symbolOfPieceOnSquare;
-        }
-    }
-
-    fen += " ";
-
-    fen += state.sideToMove.toLowerCase();
-
-    fen += " ";
-
-    let castlingRights: number = state.castlingRights;
-    fen += castlingRights & 0b1000 ? "K" : "";
-    fen += castlingRights & 0b0100 ? "Q" : "";
-    fen += castlingRights & 0b0010 ? "k" : "";
-    fen += castlingRights & 0b0001 ? "q" : "";
-
-    fen += " ";
 }
 
 function isUppercase(s: string): boolean {
@@ -179,7 +67,7 @@ function squareFromFENCharacter(config: GameConfig, pieceStr: string): Square {
 
 function getBoardWidth(row: string): number {
     let width = 0;
-    const isDigit = new RegExp('[1-9]+');
+    const isDigit = new RegExp("[1-9]+");
     for (let i = 0; i < row.length; i++) {
         const character = row[i];
         if (isDigit.test(character)) {
@@ -189,4 +77,28 @@ function getBoardWidth(row: string): number {
         }
     }
     return width;
+}
+
+function parseBoard(boardStr: string, config: GameConfig): Board {
+    const board: Board = [];
+    const isDigit = new RegExp("[1-9]+");
+    const rows: string[] = boardStr.split("/");
+
+    let currentBoardIndex = 0;
+    for (let i = rows.length - 1; i >= 0; i--) {
+        const row: string = rows[i];
+        for (let j = 0; j < row.length; j++) {
+            const character: string = row[j];
+            if (isDigit.test(character)) {
+                const amountFillEmpty: number = parseInt(character);
+                for (let k = 0; k < amountFillEmpty; k++) {
+                    board[currentBoardIndex++] = null;
+                }
+            } else {
+                board[currentBoardIndex++] = squareFromFENCharacter(config, character);
+            }
+        }
+    }
+
+    return board;
 }

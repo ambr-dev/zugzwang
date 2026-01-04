@@ -1,10 +1,47 @@
 import { assert } from "console";
-import { Move, GameState, Piece, Square, Board } from "./types";
-import { calculateIndex, getOppositeColor, getFile, indexToAlgebraic, isWhitesTurn, getRank, isCastlingAllowed, areArraysEqual } from "./utilities";
+import { make, undo } from "./make";
+import { CastlingDefinition, Color, GameState, Move, Piece } from "./types";
+import {
+    areArraysEqual,
+    calculateIndex,
+    getCastlingDefinition,
+    getOppositeColor,
+    getRank,
+    indexToAlgebraic,
+    isWhitesTurn,
+} from "./utilities";
 
-// export function legalMoves(state: State): Move[] {
-// 	return [];
-// }
+export function legalMoves(state: GameState): Move[] {
+    let moves: Move[] = pseudoMoves(state);
+    // after `make` the sideToMove changes, so store it beforehand
+    const currentSideToMove = state.sideToMove;
+
+    for (const currentMove of moves) {
+        const undoMove = make(state, currentMove);
+
+        const isAtLeastOneRoyalInCheck = (_state: GameState) => {
+            for (let i = 0; i < _state.board.length; i++) {
+                const square = _state.board[i];
+                if (square === null || square.color !== currentSideToMove || !square.piece.royal) {
+                    continue;
+                }
+                if (isSquareAttacked(_state, i, currentSideToMove)) {
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        if (isAtLeastOneRoyalInCheck(state)) {
+            moves = moves.filter((m) => JSON.stringify(m) !== JSON.stringify(currentMove));
+        }
+
+        // `make` is in-place, so undo move
+        undo(state, undoMove);
+    }
+
+    return moves;
+}
 
 export function pseudoMoves(state: GameState): Move[] {
     const boardDims = state.config.boardDimensions;
@@ -54,7 +91,7 @@ export function pseudoMoves(state: GameState): Move[] {
                     forwardOffset[1]
                 );
 
-                if (!targetIndex) continue; // OOB
+                if (targetIndex === null) continue; // OOB
                 if (isOccupied(state, targetIndex)) continue; // no need to check promotion or double step
 
                 // --- PROMOTION ---
@@ -69,8 +106,6 @@ export function pseudoMoves(state: GameState): Move[] {
                             pseudoMoves.push({
                                 from: currentIndex,
                                 to: targetIndex,
-                                enPassant: false,
-                                castle: false,
                                 promotion: piece,
                             });
                         }
@@ -80,8 +115,6 @@ export function pseudoMoves(state: GameState): Move[] {
                     pseudoMoves.push({
                         from: currentIndex,
                         to: targetIndex,
-                        enPassant: false,
-                        castle: false,
                     });
                 }
 
@@ -101,11 +134,11 @@ export function pseudoMoves(state: GameState): Move[] {
                     doubleForwardOffset[1]
                 );
 
-                if (!doubleForwardIndex) continue; // oob
+                if (doubleForwardIndex === null) continue; // oob
                 if (isOccupied(state, doubleForwardIndex)) continue;
 
                 // --- DOUBLE STEP PROMOTION (yes, this is possible) ---
-                const doubleTargetRank: number = getRank(state.config.boardDimensions, targetIndex);
+                const doubleTargetRank: number = getRank(state.config.boardDimensions, doubleForwardIndex);
                 if (doubleTargetRank === promotionRank) {
                     // For each piece that is not a pawn:
                     // Add a potential move to the pseudo moves list that promotes to that piece
@@ -114,8 +147,10 @@ export function pseudoMoves(state: GameState): Move[] {
                             pseudoMoves.push({
                                 from: currentIndex,
                                 to: doubleForwardIndex,
-                                enPassant: false,
-                                castle: false,
+                                enPassant: {
+                                    captureIndex: targetIndex,
+                                    deleteIndex: doubleForwardIndex,
+                                },
                                 promotion: piece,
                             });
                         }
@@ -125,8 +160,10 @@ export function pseudoMoves(state: GameState): Move[] {
                     pseudoMoves.push({
                         from: currentIndex,
                         to: doubleForwardIndex,
-                        enPassant: false,
-                        castle: false,
+                        enPassant: {
+                            captureIndex: targetIndex,
+                            deleteIndex: doubleForwardIndex,
+                        },
                     });
                 }
             }
@@ -144,15 +181,18 @@ export function pseudoMoves(state: GameState): Move[] {
                 const fileOffset = isWhitesTurn(state) ? captureOffset[0] : -captureOffset[0];
                 const rankOffset = isWhitesTurn(state) ? captureOffset[1] : -captureOffset[1];
                 const targetIndex: number | null = calculateIndex(boardDims, currentIndex, fileOffset, rankOffset);
-                if (!targetIndex) continue; // OOB
+                if (targetIndex === null) continue; // OOB
 
-                const isTargetEP = targetIndex === state.enPassant;
-                if (isEnemy(state, targetIndex) || isTargetEP) {
+                if (isEnemy(state, targetIndex)) {
                     pseudoMoves.push({
                         from: currentIndex,
                         to: targetIndex,
-                        enPassant: isTargetEP,
-                        castle: false,
+                    });
+                } else if (targetIndex === state.enPassant?.captureIndex) {
+                    pseudoMoves.push({
+                        from: currentIndex,
+                        to: targetIndex,
+                        isEnPassantCapture: true,
                     });
                 }
             }
@@ -162,14 +202,12 @@ export function pseudoMoves(state: GameState): Move[] {
             for (const leaperOffset of currentPiece.leaperOffsets) {
                 const targetIndex: number | null = calculateIndex(boardDims, currentIndex, leaperOffset[0], leaperOffset[1]);
 
-                if (!targetIndex) continue; // OOB
+                if (targetIndex === null) continue; // OOB
                 if (isAlly(state, targetIndex)) continue;
 
                 pseudoMoves.push({
                     from: currentIndex,
                     to: targetIndex,
-                    castle: false,
-                    enPassant: false,
                 });
             }
         }
@@ -184,7 +222,7 @@ export function pseudoMoves(state: GameState): Move[] {
                     sliderDirection[1]
                 );
                 // while not oob
-                while (!!nextSquare) {
+                while (nextSquare !== null) {
                     if (isAlly(state, nextSquare)) {
                         break;
                     }
@@ -194,8 +232,6 @@ export function pseudoMoves(state: GameState): Move[] {
                     pseudoMoves.push({
                         from: currentIndex,
                         to: nextSquare,
-                        castle: false,
-                        enPassant: false,
                     });
 
                     // ...but the raycast will end here if it's an enemy.
@@ -210,42 +246,39 @@ export function pseudoMoves(state: GameState): Move[] {
 
         // --- CASTLING ---
         if (currentPiece.royal && !isSquareAttacked(state, currentIndex)) {
-            const isAllowedCastleKing = isCastlingAllowed(state.castlingRights, currentSquare.color, "K");
-            const isAllowedCastleQueen = isCastlingAllowed(state.castlingRights, currentSquare.color, "Q");
+            for (const castlingId of state.castling) {
+                const castlingDefinition: CastlingDefinition | null = getCastlingDefinition(state, castlingId);
 
-            if (!isAllowedCastleKing && !isAllowedCastleQueen) continue;
+                if (!castlingDefinition) {
+                    throw new Error(`Couldn't find castling definition with id ${castlingId} inside config!`);
+                }
 
-            const doRaycast = (raycastDirection: -1 | 1) => {
-                // raycast for obstructing pieces
-                let raycastIndex = calculateIndex(boardDims, currentIndex, raycastDirection, 0);
-                // while inbounds 
-                // (it's not `!!raycastIndex` because !!0 would be false!!!)
-                while (raycastIndex !== null) {
-                    const raycastSquare: Square | null = state.board[raycastIndex];
-                    if (!raycastSquare) {
-                        if (isSquareAttacked(state, raycastIndex)) {
-                            break; // can't castle into check! abort!
+                if (castlingDefinition.color != currentSquare.color) {
+                    continue;
+                }
+
+                function isCastlePathLegal(royalPath: number[]): boolean {
+                    for (const royalPathIndex of royalPath) {
+                        if (state.board[royalPathIndex] !== null) {
+                            return false;
                         }
-                        // empty square! continue...
-                        raycastIndex = calculateIndex(boardDims, raycastIndex, raycastDirection, 0);
-                        continue; 
+                        if (isSquareAttacked(state, royalPathIndex)) {
+                            return false;
+                        }
                     }
-                    if (raycastSquare.color !== state.sideToMove || raycastSquare.piece.symbol !== "r") {
-                        break; // obstacle! abort!
-                    } 
-                    // Rook found!
+                    return true;
+                }
+
+                if (isCastlePathLegal(castlingDefinition.royalPath)) {
                     pseudoMoves.push({
-                        from: currentIndex,
-                        to: currentIndex + (raycastDirection * 2), // royal moves 2 squares
-                        castle: true,
-                        enPassant: false,
+                        from: castlingDefinition.royalFrom,
+                        to: castlingDefinition.royalTo,
+                        castle: castlingId,
                     });
-                    break;
+                } else {
+                    continue;
                 }
             }
-
-            if (isAllowedCastleKing) doRaycast(1);
-            if (isAllowedCastleQueen) doRaycast(-1);
         }
     }
     return pseudoMoves;
@@ -259,15 +292,24 @@ function isOccupied(state: GameState, index: number): boolean {
     return !!state.board[index];
 }
 
-function isEnemy(state: GameState, index: number): boolean {
-    return state.board[index]?.color === getOppositeColor(state.sideToMove);
+function isEnemy(state: GameState, index: number, allyColor?: Color): boolean {
+    return state.board[index]?.color === getOppositeColor(allyColor ?? state.sideToMove);
 }
 
-function isAlly(state: GameState, index: number): boolean {
-    return state.board[index]?.color === state.sideToMove;
+function isAlly(state: GameState, index: number, allyColor?: Color): boolean {
+    return state.board[index]?.color === (allyColor ?? state.sideToMove);
 }
 
-export function isSquareAttacked(state: GameState, index: number): boolean {
+/**
+ * Determines if the square index in question is being attacked by a piece which color is not `allyColor`.
+ * Useful for determining whether a move is legal or for the 'game over' condition.
+ *
+ * @param state
+ * @param index board index to evaluate
+ * @param allyColor pieces with this color will not be considered as an attacker of index `index`.
+ * @returns `true` if square is attacked by pieces that are not `allyColor`, false otherwise.
+ */
+export function isSquareAttacked(state: GameState, index: number, allyColor?: Color): boolean {
     // Collect all possible movement sets
     const allPieces = state.config.pieces;
     let sliderDirections: number[][][] = []; // cursed
@@ -284,16 +326,16 @@ export function isSquareAttacked(state: GameState, index: number): boolean {
     for (const currentSlider of sliderDirections) {
         for (const currentDirection of currentSlider) {
             // Raycast direction = mirrored slider direction
-            const flippedDirection = currentDirection.map(d => -d);
+            const flippedDirection = currentDirection.map((d) => -d);
             let i = calculateIndex(state.config.boardDimensions, index, flippedDirection[0], flippedDirection[1]);
             // while inbounds
             while (i !== null) {
                 if (isEmpty(state, i)) {
                     i = calculateIndex(state.config.boardDimensions, i, flippedDirection[0], flippedDirection[1]);
                     continue;
-                } 
+                }
 
-                if (isAlly(state, i)) {
+                if (isAlly(state, i, allyColor)) {
                     break;
                 }
 
@@ -302,8 +344,10 @@ export function isSquareAttacked(state: GameState, index: number): boolean {
                 if (isPieceNotASlider) {
                     break;
                 }
-                
-                const pieceSeesSquare = currentSquare!.piece.sliderDirections!.find((d) => areArraysEqual(d, currentDirection));
+
+                const pieceSeesSquare = currentSquare!.piece.sliderDirections!.find((d) =>
+                    areArraysEqual(d, currentDirection)
+                );
                 if (!!pieceSeesSquare) {
                     return true;
                 }
@@ -316,10 +360,15 @@ export function isSquareAttacked(state: GameState, index: number): boolean {
     for (const currentLeaper of leaperOffsets) {
         for (const currentLeapOffset of currentLeaper) {
             const flippedLeapOffset = currentLeapOffset.map((o) => -o);
-            const targetIndex = calculateIndex(state.config.boardDimensions, index, flippedLeapOffset[0], flippedLeapOffset[1]);
+            const targetIndex = calculateIndex(
+                state.config.boardDimensions,
+                index,
+                flippedLeapOffset[0],
+                flippedLeapOffset[1]
+            );
 
             // oob
-            if (targetIndex === null) continue; 
+            if (targetIndex === null) continue;
             if (isEmpty(state, targetIndex)) continue;
             if (isAlly(state, targetIndex)) continue;
 
@@ -340,7 +389,7 @@ export function isSquareAttacked(state: GameState, index: number): boolean {
 
             const targetIndex = calculateIndex(state.config.boardDimensions, index, flippedOffset[0], flippedOffset[1]);
             if (targetIndex === null) continue;
-            if (isEmpty(state, targetIndex)) continue; 
+            if (isEmpty(state, targetIndex)) continue;
             if (isAlly(state, targetIndex)) continue;
 
             const currentSquare = state.board[targetIndex];

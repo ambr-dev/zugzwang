@@ -12,7 +12,7 @@
                 [-1, 1],
                 [1, 1]
             ],
-            "forward": [[1, 0]]
+            "forward": [[0, 1]]
         },
         {
             "symbol": "b",
@@ -73,5 +73,57 @@
             ]
         }
     ],
-    "startingPosition": "rnbqkqbnr/ppppppppp/9/9/9/9/9/PPPPPPPPP/RNBQKQBNR w KQkq - 0 1"
+    "startingPosition": "rnbqkqbnr/ppppppppp/9/9/9/9/9/PPPPPPPPP/RNBQKQBNR",
+    "sideToMove": "W",
+    "castling": {
+        "available": ["w-K", "w-Q", "b-K", "b-Q"],
+        "routes": [
+            {
+                "id": "w-K",
+                "color": "W",
+                "rookSymbol": "r",
+                "royalSymbol": "k",
+                "rookFrom": 8,
+                "rookTo": 5,
+                "royalFrom": 4,
+                "royalTo": 6,
+                "royalPath": [5, 6]
+            },
+            {
+                "id": "w-Q",
+                "color": "W",
+                "rookSymbol": "r",
+                "royalSymbol": "k",
+                "rookFrom": 0,
+                "rookTo": 3,
+                "royalFrom": 4,
+                "royalTo": 2,
+                "royalPath": [3, 2]
+            },
+            {
+                "id": "b-K",
+                "color": "B",
+                "rookSymbol": "r",
+                "royalSymbol": "k",
+                "rookFrom": 80,
+                "rookTo": 77,
+                "royalFrom": 76,
+                "royalTo": 77,
+                "royalPath": [76, 77]
+            },
+            {
+                "id": "b-Q",
+                "color": "B",
+                "rookSymbol": "r",
+                "royalSymbol": "k",
+                "rookFrom": 72,
+                "rookTo": 75,
+                "royalFrom": 76,
+                "royalTo": 74,
+                "royalPath": [75, 74]
+            }
+        ]
+    },
+    "halfMove": 0,
+    "fullMove": 1
 }

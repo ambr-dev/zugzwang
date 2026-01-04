@@ -7,4 +7,6 @@
 - [x] continue pseudo move generation
 - [x] castling pseudo moves (Q + K side)
 - [x] en croissant pseudo move
-- [ ] i think somewhere in the code there is a raycast bug with !!index in a while head.
+- [x] i think somewhere in the code there is a raycast bug with !!index in a while head.
+- [ ] enhance the config with an en passant field and diverge to normal en passant if not present
+- [ ] enhance the config with a castling object and diverge to normal castling if not present
