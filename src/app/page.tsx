@@ -1,17 +1,19 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import pieceSpriteUrls from "./resources/src.json";
+import { getSpriteUrl } from "./pieceImage";
 
 export default function Home() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const boardDimensions = {
-        width: 8,
-        height: 8,
+        width: 20,
+        height: 12,
     };
     const lightSquareHex = "#c7c1ac";
     const darkSquareHex = "#585550";
 
-    const boardString: string = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
+    const boardString: string = "tswgemrnbqkbnrmegwst/pppppppppppppppppppp/20/20/20/20/20/20/20/20/PPPPPPPPPPPPPPPPPPPP/TSWGEMRNBQKBNRMEGWST";
     const board: ({ piece: string; color: "W" | "B" } | null)[] = [];
     const animate = false;
 
@@ -31,30 +33,25 @@ export default function Home() {
             throw new Error();
         }
 
-        const fillBlack = () => {
-            ctx.fillStyle = "black";
-            ctx.strokeStyle = "white";
-        };
-
-        const fillWhite = () => {
-            ctx.fillStyle = "white";
-            ctx.strokeStyle = "black";
-        };
-
         const squareWidthPx = canvas.width / boardDimensions.width;
         const squareHeightPx = canvas.height / boardDimensions.height;
 
-        const textDrawOffset = squareHeightPx / 5;
-
         const boardIndexFromCoordinates = (x: number, y: number) => {
             const _x = Math.floor(x / squareWidthPx);
-            const _y = (boardDimensions.height - 1 - Math.floor(y / squareWidthPx)) * boardDimensions.width;
+            const _y = (boardDimensions.height - 1 - Math.floor(y / squareHeightPx)) * boardDimensions.width;
 
             return _x + _y;
         };
 
+        const coordinatesFromBoardIndex = (i: number): { x: number; y: number } => {
+            return {
+                x: (i % boardDimensions.width) * squareWidthPx,
+                y: canvas.height - (Math.floor(i / boardDimensions.width) * squareHeightPx) - squareHeightPx,
+            };
+        };
+
         const fillBoard = () => {
-            const isDigit = new RegExp("[1-9]+");
+            const isDigit = new RegExp("[0-9]+");
             const isUppercase = new RegExp("[A-Z]");
             const rows: string[] = boardString.split("/");
             let boardIndex = 0;
@@ -63,8 +60,16 @@ export default function Home() {
                 const row: string = rows[i];
                 for (let j = 0; j < row.length; j++) {
                     const character: string = row[j];
+                    console.log(`seeing character: ${character}`);
                     if (isDigit.test(character)) {
-                        const amountFillEmpty: number = parseInt(character);
+                        let amountFillEmptyStr: string = "";
+                        while (j < row.length && isDigit.test(row.charAt(j))) {
+                            amountFillEmptyStr += row[j++];
+                        }
+                        j--; // because at the end of the for loop we have `j++`
+                    
+                        const amountFillEmpty: number = parseInt(amountFillEmptyStr);
+                        console.log(`filling [${boardIndex}, ${boardIndex + amountFillEmpty}] with nulls`);
                         for (let k = 0; k < amountFillEmpty; k++) {
                             board[boardIndex++] = null;
                         }
@@ -96,31 +101,18 @@ export default function Home() {
         };
 
         const drawPieces = () => {
-            ctx.textAlign = "center";
-            ctx.font = "bold 50pt serif";
-
-            const isDigit = new RegExp("[1-9]+");
-            // 0 = <x:0, y:0> canvas space, but a8 in classic 8x8
             for (let i = 0; i < board.length; i++) {
                 const currentPiece = board[i];
                 if (currentPiece === null) {
                     continue;
                 }
 
-                const col = i % boardDimensions.width;
-                const row = boardDimensions.width - Math.floor(i / boardDimensions.width) - 1;
+                const image: HTMLImageElement = new Image();
+                image.src = getSpriteUrl(currentPiece.piece, currentPiece.color);
 
-                const x = col * squareWidthPx + squareWidthPx / 2;
-                const y = row * squareHeightPx + squareHeightPx / 2;
+                const {x, y} = coordinatesFromBoardIndex(i);
 
-                if (currentPiece.color === "W") {
-                    fillWhite();
-                } else {
-                    fillBlack();
-                }
-
-                ctx.fillText(currentPiece.piece, x, y + textDrawOffset);
-                ctx.strokeText(currentPiece.piece, x, y + textDrawOffset);
+                ctx.drawImage(image, x, y, squareWidthPx, squareHeightPx);
             }
         };
 
@@ -150,14 +142,13 @@ export default function Home() {
         const drawDraggingPiece = () => {
             if (!draggingPiece) return;
 
-            if (draggingPiece.color === "W") {
-                fillWhite();
-            } else {
-                fillBlack();
-            }
+            const image: HTMLImageElement = new Image();
+            image.src = getSpriteUrl(draggingPiece.piece, draggingPiece.color);
 
-            ctx.fillText(draggingPiece.piece, canvasMouseX, canvasMouseY + textDrawOffset);
-            ctx.strokeText(draggingPiece.piece, canvasMouseX, canvasMouseY + textDrawOffset);
+            const x = canvasMouseX - squareWidthPx / 2;
+            const y = canvasMouseY - squareHeightPx / 2;
+
+            ctx.drawImage(image, x, y, squareWidthPx, squareHeightPx);
         };
 
         fillBoard();
@@ -175,7 +166,13 @@ export default function Home() {
 
     return (
         <div className="w-full flex flex-col items-center">
-            <canvas ref={canvasRef} id="canvas" width="900" height="900" className="border-8"></canvas>
+            <canvas
+                ref={canvasRef}
+                id="canvas"
+                width={100 * boardDimensions.width}
+                height={100 * boardDimensions.height}
+                className="mt-10 rounded-xl"
+            ></canvas>
         </div>
     );
 }
